@@ -1,0 +1,15 @@
+{
+  "buildCommand": null,
+  "outputDirectory": "kalma-player/app",
+  "rewrites": [
+    { "source": "/api/interpret-mood", "destination": "/api/interpret-mood" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    }
+  ]
+}
