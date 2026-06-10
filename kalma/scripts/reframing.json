@@ -1,0 +1,60 @@
+{
+  "style": "reframing",
+  "name": "Cognitive Reframing",
+  "voiceSettings": {
+    "rate": 0.84,
+    "pitch": 0.97
+  },
+  "intro": [
+    "Welcome. This is a space for gentle honesty.",
+    "Sometimes our minds tell us stories. And sometimes those stories aren't quite true.",
+    "Right now, we're going to look at those stories together.",
+    "Not to judge them. Not to fight them. Just to see them more clearly.",
+    "Take a slow breath in. And as you exhale, set down the weight of certainty.",
+    "Let's begin with curiosity."
+  ],
+  "body": [
+    [
+      "Think of something that's been weighing on you. A thought that keeps returning.",
+      "Don't push it away. Let it arrive. What does it say?",
+      "Now ask yourself gently: Is this a fact, or is this a feeling?",
+      "Feelings are real. But they're not always accurate reporters of reality.",
+      "What if this thought is only one version of the story?"
+    ],
+    [
+      "We often use absolute words. Always. Never. Everyone. No one.",
+      "Notice if your heavy thought contains one of these.",
+      "What happens if you soften it? Always becomes sometimes. Never becomes not yet.",
+      "The world is rarely as absolute as our anxious minds suggest.",
+      "Breathe into that softening. There is room here."
+    ],
+    [
+      "Imagine a friend came to you with the exact thought you're carrying.",
+      "What would you say to them? Would you agree that it's hopeless?",
+      "Or would you offer them kindness? Context? A different angle?",
+      "Now offer that same compassion to yourself.",
+      "You deserve the same grace you'd give someone you love."
+    ],
+    [
+      "Consider this: what evidence exists against the difficult thought?",
+      "Has there been a time when the opposite was true?",
+      "A time when things worked out, even when you were sure they wouldn't?",
+      "Your mind tends to remember the pain and forget the resilience.",
+      "But the resilience is there. It's always been there."
+    ],
+    [
+      "Now, gently rebuild the thought.",
+      "If the old story was heavy, what would a lighter version sound like?",
+      "Not a lie. Not forced positivity. Just... a more complete picture.",
+      "Something that holds both the difficulty and the possibility.",
+      "Sit with that new thought. Breathe it in. Let it settle."
+    ]
+  ],
+  "closing": [
+    "You don't have to believe the new thought perfectly. Not yet.",
+    "It's enough to know that another perspective exists.",
+    "That the story your mind tells is not the only story.",
+    "As you return to your day, carry this with you: you are the observer of your thoughts, not their prisoner.",
+    "Gently open your eyes. You see more clearly now."
+  ]
+}

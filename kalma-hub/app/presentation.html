@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kálma — Presentation</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #08080f; --bg2: #0e0e1a; --bg3: #151525;
+      --text: #e8e4df; --dim: #7a7690; --accent: #b48eff; --accent2: #8b6fc0;
+      --green: #4ade80; --blue: #38bdf8; --amber: #f59e0b; --pink: #f472b6;
+      --cyan: #22d3ee;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; overflow: hidden; }
+
+    /* Slide container */
+    .deck { width: 100%; height: 100%; position: relative; }
+    .slide {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      padding: 60px 80px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.6s ease;
+    }
+    .slide.active { opacity: 1; pointer-events: auto; }
+
+    /* Typography */
+    h1 { font-size: 3.5rem; font-weight: 300; letter-spacing: 0.05em; margin-bottom: 16px; text-align: center; }
+    h2 { font-size: 2rem; font-weight: 300; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 32px; text-align: center; }
+    h3 { font-size: 1.3rem; font-weight: 400; color: var(--accent); margin-bottom: 12px; letter-spacing: 0.03em; }
+    p, li { font-size: 1.05rem; line-height: 1.7; color: var(--dim); }
+    p strong, li strong { color: var(--text); font-weight: 500; }
+    .subtitle { font-size: 1.3rem; color: var(--dim); font-weight: 300; text-align: center; margin-bottom: 8px; }
+    .big-text { font-size: 1.8rem; color: var(--text); font-weight: 300; line-height: 1.5; text-align: center; max-width: 800px; }
+    .highlight { color: var(--accent); }
+    .green { color: var(--green); }
+    .blue { color: var(--blue); }
+    .amber { color: var(--amber); }
+    .pink { color: var(--pink); }
+    .cyan { color: var(--cyan); }
+
+    /* Layouts */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; width: 100%; max-width: 1000px; }
+    .col { display: flex; flex-direction: column; gap: 12px; }
+    .full-width { width: 100%; max-width: 900px; }
+    .center-content { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+
+    /* Lists */
+    ul { list-style: none; padding: 0; }
+    ul li { padding: 6px 0; padding-left: 20px; position: relative; }
+    ul li::before { content: ''; position: absolute; left: 0; top: 14px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); opacity: 0.6; }
+
+    /* Cards */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; width: 100%; max-width: 900px; }
+    .card {
+      background: var(--bg3); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;
+      padding: 20px; text-align: center;
+    }
+    .card h4 { font-size: 0.9rem; color: var(--text); font-weight: 400; margin-bottom: 6px; }
+    .card p { font-size: 0.8rem; }
+    .card .icon { font-size: 1.8rem; margin-bottom: 8px; display: block; }
+    .card.accent-border { border-color: rgba(180,142,255,0.3); }
+
+    /* Stat cards */
+    .stat-row { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin: 20px 0; }
+    .stat {
+      background: var(--bg3); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;
+      padding: 24px 32px; text-align: center; min-width: 180px;
+    }
+    .stat .number { font-size: 2.2rem; font-weight: 300; color: var(--green); }
+    .stat .label { font-size: 0.8rem; color: var(--dim); margin-top: 4px; }
+
+    /* Intention pills */
+    .pill-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 16px 0; }
+    .pill {
+      padding: 8px 18px; border-radius: 20px;
+      background: rgba(180,142,255,0.1); border: 1px solid rgba(180,142,255,0.2);
+      font-size: 0.85rem; color: var(--accent);
+    }
+
+    /* Table */
+    .simple-table { width: 100%; max-width: 800px; border-collapse: collapse; margin-top: 12px; }
+    .simple-table th { text-align: left; font-size: 0.75rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); font-weight: 400; }
+    .simple-table td { padding: 10px 12px; font-size: 0.88rem; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--dim); }
+    .simple-table td:first-child { color: var(--text); }
+
+    /* Vision block */
+    .vision-box {
+      background: linear-gradient(135deg, rgba(180,142,255,0.08), rgba(74,222,128,0.04));
+      border: 1px solid rgba(180,142,255,0.2); border-radius: 16px;
+      padding: 32px 40px; max-width: 800px; text-align: center;
+    }
+    .vision-box p { font-size: 1.15rem; color: var(--text); line-height: 1.7; font-weight: 300; }
+
+    /* Orb */
+    .orb-container { position: relative; width: 260px; height: 260px; margin: 16px auto; }
+    .orb {
+      width: 260px; height: 260px;
+      animation: orb-breathe 4s ease-in-out infinite;
+    }
+    .orb img { width: 100%; height: 100%; }
+    @keyframes orb-breathe {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50% { transform: scale(1.06); opacity: 1; }
+    }
+
+    /* Flow arrow */
+    .flow { display: flex; align-items: center; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+    .flow-item {
+      padding: 10px 18px; border-radius: 10px;
+      background: var(--bg3); border: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.88rem; color: var(--text);
+    }
+    .flow-arrow { color: var(--accent); font-size: 1.2rem; }
+
+    /* Navigation */
+    .nav {
+      position: fixed; bottom: 24px; right: 32px; z-index: 100;
+      display: flex; gap: 8px; align-items: center;
+    }
+    .nav button {
+      width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(14,14,26,0.9); color: var(--dim); cursor: pointer;
+      font-size: 1rem; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; backdrop-filter: blur(8px);
+    }
+    .nav button:hover { border-color: var(--accent); color: var(--accent); }
+    .nav .counter { font-size: 0.75rem; color: var(--dim); min-width: 50px; text-align: center; }
+
+    /* Progress bar */
+    .progress { position: fixed; top: 0; left: 0; height: 2px; background: var(--accent); transition: width 0.4s ease; z-index: 100; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .slide { padding: 30px 24px; }
+      h1 { font-size: 2.2rem; }
+      h2 { font-size: 1.4rem; }
+      .two-col { grid-template-columns: 1fr; gap: 24px; }
+      .big-text { font-size: 1.3rem; }
+      .stat .number { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<div class="deck" id="deck">
+
+  <!-- SLIDE 1: Title -->
+  <div class="slide active" data-slide="0">
+    <div class="orb-container"><div class="orb"><img src="./brand/kalma-orb.svg" alt="Kálma"></div></div>
+    <h1>Kálma</h1>
+    <p class="subtitle">Living music that adapts to you</p>
+    <p style="color: var(--dim); font-size: 0.85rem; margin-top: 32px;">May 2026</p>
+  </div>
+
+  <!-- SLIDE 2: What is Kálma -->
+  <div class="slide" data-slide="1">
+    <h2>What is Kálma?</h2>
+    <p class="big-text">
+      Kálma creates <strong class="highlight">music that's alive</strong>. Every sound is generated in real-time — no recordings, no loops, no playlists. The music is born fresh every time you open it, and <strong>it never plays the same thing twice.</strong>
+    </p>
+    <div class="flow" style="margin-top: 32px;">
+      <span class="flow-item">No app store</span>
+      <span class="flow-arrow">·</span>
+      <span class="flow-item">Runs in your browser</span>
+      <span class="flow-arrow">·</span>
+      <span class="flow-item">Works on your phone</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: The Platform -->
+  <div class="slide" data-slide="2">
+    <h2>The Platform</h2>
+    <p class="subtitle" style="margin-bottom: 32px;">Kálma Hub — the home base</p>
+    <div class="card-grid">
+      <div class="card accent-border">
+        <span class="icon">🎵</span>
+        <h4>Kálma Player</h4>
+        <p>Adaptive music for everyone</p>
+      </div>
+      <div class="card accent-border">
+        <span class="icon">🧘</span>
+        <h4>Kálma Wellness</h4>
+        <p>Therapeutic sound for healing</p>
+      </div>
+      <div class="card">
+        <span class="icon">🎹</span>
+        <h4>Studio</h4>
+        <p>5 custom instruments to play</p>
+      </div>
+      <div class="card">
+        <span class="icon">📐</span>
+        <h4>Architecture</h4>
+        <p>Full technical documentation</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: Kálma Player -->
+  <div class="slide" data-slide="3">
+    <h2>Kálma Player</h2>
+    <p class="big-text" style="margin-bottom: 32px;">Music that changes with your world</p>
+    <div class="flow">
+      <span class="flow-item">Opens</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">Senses your environment</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">Starts playing</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: How Player works -->
+  <div class="slide" data-slide="4">
+    <h2>How It Works</h2>
+    <div class="two-col">
+      <div class="col">
+        <h3>It senses</h3>
+        <ul>
+          <li>Time of day</li>
+          <li>Weather &amp; temperature</li>
+          <li>Season</li>
+          <li>Whether you're moving or still</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>It adapts</h3>
+        <ul>
+          <li>Music <strong>gently shifts</strong> — never abrupt</li>
+          <li>Type "piano" and <strong>a piano starts playing</strong></li>
+          <li>Start walking and <strong>new sounds appear</strong></li>
+          <li>Like/dislike <strong>teaches it your taste</strong></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: Player sound -->
+  <div class="slide" data-slide="5">
+    <h2>What You Hear</h2>
+    <div class="center-content">
+      <div class="card-grid" style="max-width: 800px;">
+        <div class="card">
+          <h4>Introspective Soundscapes</h4>
+          <p>Warm, reflective drone bed in stereo</p>
+        </div>
+        <div class="card">
+          <h4>Generative Piano</h4>
+          <p>Debussy-inspired, chord-aware, calm 45–60 BPM</p>
+        </div>
+        <div class="card">
+          <h4>Movement-Reactive</h4>
+          <p>Walk → new pads fade in. Stop → they dissolve</p>
+        </div>
+        <div class="card">
+          <h4>AI Mood Understanding</h4>
+          <p>"Floating in space" → music reshapes instantly</p>
+        </div>
+        <div class="card">
+          <h4>Adaptive Beats</h4>
+          <p>When enabled, walking triggers dreamy beats and running triggers energy. Off by default.</p>
+        </div>
+        <div class="card">
+          <h4>Studio-Grade Audio</h4>
+          <p>Compressor, EQ chain, 4.5s reverb, true stereo</p>
+        </div>
+      </div>
+      <p style="font-size: 0.85rem; margin-top: 16px;">Sacred geometry visualizer · Mood-driven color palettes · Like/dislike learning</p>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: Kálma Wellness -->
+  <div class="slide" data-slide="6">
+    <h2>Kálma Wellness</h2>
+    <p class="big-text" style="margin-bottom: 24px;">Therapeutic sound for your mind and body</p>
+    <div class="flow">
+      <span class="flow-item">Choose your intent</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">Music auto-plays</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">Shift mood anytime</span>
+    </div>
+    <div class="pill-row" style="margin-top: 28px;">
+      <span class="pill">Meditate</span>
+      <span class="pill">Sleep</span>
+      <span class="pill">Unwind</span>
+      <span class="pill">Work Focus</span>
+      <span class="pill">Pain Relief</span>
+      <span class="pill">Creative Flow</span>
+      <span class="pill">Uplift</span>
+      <span class="pill">Reading</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 8: Wellness science -->
+  <div class="slide" data-slide="7">
+    <h2>Science-Backed Defaults</h2>
+    <p style="text-align: center; margin-bottom: 20px;">Each intention comes pre-loaded with the right healing layers</p>
+    <table class="simple-table">
+      <thead><tr><th>Intention</th><th>Activates</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Sleep</strong></td><td>Binaural beats · Delta</td><td>Deep sleep brainwave range</td></tr>
+        <tr><td><strong>Meditate</strong></td><td>Tibetan singing bowls · Theta</td><td>Shown to reduce anxiety</td></tr>
+        <tr><td><strong>Work Focus</strong></td><td>Isochronic tones · Beta</td><td>Concentration sweet spot</td></tr>
+        <tr><td><strong>Creative</strong></td><td>Binaural beats · Theta</td><td>Associated with creative insight</td></tr>
+        <tr><td><strong>Pain Relief</strong></td><td>Binaural beats · Delta</td><td>Body relaxation response</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size: 0.8rem; margin-top: 16px; text-align: center;">+ Meditation styles: Introspection · Full Chakra Tuning (voice-guided) · Gratitude</p>
+  </div>
+
+  <!-- SLIDE 9: Wellness layers -->
+  <div class="slide" data-slide="8">
+    <h2>Layers You Can Mix</h2>
+    <div class="two-col" style="max-width: 800px;">
+      <div class="col">
+        <h3>Healing Sounds</h3>
+        <ul>
+          <li>Binaural beats</li>
+          <li>Isochronic tones</li>
+          <li>Tibetan singing bowls</li>
+          <li>Whale sounds</li>
+          <li>Heartbeat pulse</li>
+          <li>Wind chimes · Gong · Flute</li>
+          <li>Chanting</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>Nature Sounds</h3>
+        <ul>
+          <li>Ocean waves</li>
+          <li>Gentle stream</li>
+          <li>Rain</li>
+          <li>Fireplace</li>
+          <li>Calm forest</li>
+          <li>Night crickets</li>
+          <li>Mountain breeze</li>
+        </ul>
+      </div>
+    </div>
+    <p style="font-size: 0.85rem; margin-top: 20px; text-align: center;">All customizable from the player at any time</p>
+  </div>
+
+  <!-- SLIDE 10: Under the Hood -->
+  <div class="slide" data-slide="9">
+    <h2>Under the Hood</h2>
+    <p class="subtitle" style="margin-bottom: 24px;">Professional audio chain, zero backend</p>
+    <div class="flow" style="margin-bottom: 24px;">
+      <span class="flow-item">Synths</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">Music Bus</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">4.5s Reverb</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">Compressor</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">Warmth EQ</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">Air EQ</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">Speakers</span>
+    </div>
+    <div class="card-grid" style="max-width: 800px;">
+      <div class="card">
+        <h4>20 Engine Files</h4>
+        <p>Each module is isolated and testable</p>
+      </div>
+      <div class="card">
+        <h4>Stereo Field</h4>
+        <p>Panned voices, register-panned piano, decorrelated reverb</p>
+      </div>
+      <div class="card">
+        <h4>Zero Paid APIs</h4>
+        <p>Weather, motion, audio — all free-tier or client-side</p>
+      </div>
+      <div class="card">
+        <h4>Shared Core</h4>
+        <p>Both apps share MusicBrain, Piano, Synths, and EQ chain</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 11: The Opportunity -->
+  <div class="slide" data-slide="10">
+    <h2>The Opportunity</h2>
+    <div class="stat-row">
+      <div class="stat">
+        <div class="number">$1.8B</div>
+        <div class="label">Market today</div>
+      </div>
+      <div class="stat">
+        <div class="number">$7.4B</div>
+        <div class="label">Projected 2034</div>
+      </div>
+      <div class="stat">
+        <div class="number">17.1%</div>
+        <div class="label">Annual growth</div>
+      </div>
+    </div>
+    <div class="full-width" style="margin-top: 24px;">
+      <table class="simple-table">
+        <thead><tr><th>Platform</th><th>Approach</th></tr></thead>
+        <tbody>
+          <tr><td>Endel</td><td style="color: var(--dim);">Algorithmic, button presets</td></tr>
+          <tr><td>Brain.fm</td><td style="color: var(--dim);">Pre-composed tracks</td></tr>
+          <tr><td><strong class="highlight">Kálma</strong></td><td><strong>Generated live · Adapts to your environment · Learns from you</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SLIDE 11: What's Next -->
+  <div class="slide" data-slide="11">
+    <h2>What's Next</h2>
+    <div class="two-col" style="max-width: 900px;">
+      <div class="col">
+        <h3>Mobile App</h3>
+        <ul>
+          <li>Native iOS &amp; Android</li>
+          <li>Background playback</li>
+          <li>Daily wellness reminders</li>
+          <li>Offline mode</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>Talk to Kálma</h3>
+        <ul>
+          <li>A living musical entity — it <strong>listens, speaks, and plays</strong></li>
+          <li>Talk naturally about your day, your stress, anything</li>
+          <li>It responds in <strong>words and music</strong> at the same time</li>
+          <li>Remembers what helped, learns your rhythms</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 12: Vision -->
+  <div class="slide" data-slide="12">
+    <div class="orb-container"><div class="orb"><img src="./brand/kalma-orb.svg" alt="Kálma"></div></div>
+    <div class="vision-box">
+      <p>Kálma is the first AI you don't just talk <em>to</em> — you <strong>feel</strong> it.<br><br>
+      It responds with language and music as one.<br>
+      A companion that meets you where you are, every day.</p>
+    </div>
+    <p style="color: var(--dim); font-size: 1rem; margin-top: 32px; letter-spacing: 0.05em;">kálma</p>
+    <p style="margin-top: 24px;"><a href="./architecture.html" target="_blank" style="color: var(--accent); text-decoration: none; font-size: 0.85rem; border-bottom: 1px solid rgba(180,142,255,0.3);">Detailed architecture &amp; technical docs →</a></p>
+  </div>
+
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+  <button id="btn-prev" title="Previous">←</button>
+  <span class="counter" id="counter">1 / 13</span>
+  <button id="btn-next" title="Next">→</button>
+</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const counter = document.getElementById('counter');
+  const progress = document.getElementById('progress');
+
+  function goTo(n) {
+    if (n < 0 || n >= total) return;
+    slides[current].classList.remove('active');
+    current = n;
+    slides[current].classList.add('active');
+    counter.textContent = (current + 1) + ' / ' + total;
+    progress.style.width = ((current + 1) / total * 100) + '%';
+  }
+
+  document.getElementById('btn-prev').addEventListener('click', () => goTo(current - 1));
+  document.getElementById('btn-next').addEventListener('click', () => goTo(current + 1));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goTo(current + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(current - 1); }
+  });
+
+  // Touch swipe
+  let touchStartX = 0;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', (e) => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) goTo(current + 1);
+      else goTo(current - 1);
+    }
+  });
+
+  // Init
+  progress.style.width = (1 / total * 100) + '%';
+</script>
+
+</body>
+</html>

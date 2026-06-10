@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 420" width="400" height="420">
+  <defs>
+    <radialGradient id="p1" cx="50%" cy="50%"><stop offset="0%" stop-color="#8cb4ff" stop-opacity="0.25"/><stop offset="70%" stop-color="#8cb4ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="p2" cx="50%" cy="50%"><stop offset="0%" stop-color="#c8aaff" stop-opacity="0.3"/><stop offset="70%" stop-color="#c8aaff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="p3" cx="50%" cy="50%"><stop offset="0%" stop-color="#ffc8dc" stop-opacity="0.3"/><stop offset="70%" stop-color="#ffbed2" stop-opacity="0"/></radialGradient>
+    <radialGradient id="p4" cx="50%" cy="50%"><stop offset="0%" stop-color="#b4ffb4" stop-opacity="0.5"/><stop offset="70%" stop-color="#b4ffb4" stop-opacity="0"/></radialGradient>
+    <radialGradient id="pc" cx="50%" cy="50%"><stop offset="0%" stop-color="#dcffdc" stop-opacity="0.6"/><stop offset="70%" stop-color="#c8ffc8" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="400" height="420" fill="#0a0a12"/>
+  <circle cx="200" cy="170" r="140" fill="url(#p1)"/>
+  <circle cx="200" cy="170" r="105" fill="url(#p2)"/>
+  <circle cx="200" cy="170" r="77" fill="url(#p3)"/>
+  <circle cx="200" cy="170" r="49" fill="url(#p4)"/>
+  <circle cx="200" cy="170" r="28" fill="url(#pc)"/>
+  <text x="200" y="330" text-anchor="middle" font-family="Georgia, 'Cormorant Garamond', serif" font-size="44" font-weight="300" letter-spacing="10" fill="rgba(255,255,255,0.92)">Kálma</text>
+  <text x="200" y="365" text-anchor="middle" font-family="'Segoe UI', system-ui, sans-serif" font-size="14" font-weight="300" letter-spacing="8" fill="rgba(255,255,255,0.4)" text-transform="uppercase">PLAYER</text>
+</svg>

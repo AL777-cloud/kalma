@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <radialGradient id="b1" cx="30%" cy="50%"><stop offset="0%" stop-color="#8cb4ff" stop-opacity="0.2"/><stop offset="70%" stop-color="#8cb4ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="b2" cx="30%" cy="50%"><stop offset="0%" stop-color="#c8aaff" stop-opacity="0.25"/><stop offset="70%" stop-color="#c8aaff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="b3" cx="30%" cy="50%"><stop offset="0%" stop-color="#ffc8dc" stop-opacity="0.25"/><stop offset="70%" stop-color="#ffbed2" stop-opacity="0"/></radialGradient>
+    <radialGradient id="b4" cx="30%" cy="50%"><stop offset="0%" stop-color="#b4ffb4" stop-opacity="0.4"/><stop offset="70%" stop-color="#b4ffb4" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bc" cx="30%" cy="50%"><stop offset="0%" stop-color="#dcffdc" stop-opacity="0.5"/><stop offset="70%" stop-color="#c8ffc8" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#0a0a12"/>
+  <!-- Orb on the left -->
+  <circle cx="320" cy="315" r="250" fill="url(#b1)"/>
+  <circle cx="320" cy="315" r="188" fill="url(#b2)"/>
+  <circle cx="320" cy="315" r="138" fill="url(#b3)"/>
+  <circle cx="320" cy="315" r="88" fill="url(#b4)"/>
+  <circle cx="320" cy="315" r="50" fill="url(#bc)"/>
+  <!-- Text on the right -->
+  <text x="650" y="290" font-family="Georgia, 'Cormorant Garamond', serif" font-size="72" font-weight="300" letter-spacing="14" fill="rgba(255,255,255,0.92)">Kálma</text>
+  <text x="650" y="340" font-family="'Segoe UI', system-ui, sans-serif" font-size="18" font-weight="300" letter-spacing="6" fill="rgba(255,255,255,0.35)">SOUND THAT LISTENS</text>
+  <line x1="650" y1="360" x2="850" y2="360" stroke="rgba(108,99,255,0.2)" stroke-width="1"/>
+  <text x="650" y="395" font-family="'Segoe UI', system-ui, sans-serif" font-size="14" font-weight="300" letter-spacing="2" fill="rgba(255,255,255,0.25)">Adaptive music that transforms with your life</text>
+</svg>

@@ -1,0 +1,60 @@
+{
+  "theme": "emotional-release",
+  "name": "Emotional Release",
+  "voiceSettings": {
+    "rate": 0.80,
+    "pitch": 0.93
+  },
+  "intro": [
+    "Welcome. This is a safe space.",
+    "Whatever you've been holding, you have permission to set it down here.",
+    "We carry so much. Feelings we didn't have time for. Words we never said.",
+    "Right now, nothing is expected of you except to breathe and feel.",
+    "If emotions come, let them. They're not weakness. They're release.",
+    "Let's begin."
+  ],
+  "body": [
+    [
+      "Place your hand on your chest if it feels right.",
+      "Feel the warmth of your own touch. You are your own safe harbor.",
+      "Now ask yourself: What have I been holding that I haven't let myself feel?",
+      "Don't force an answer. Just open the door and see what walks through.",
+      "Whatever it is, it's welcome here."
+    ],
+    [
+      "Sometimes we armor up to survive. We had to. It was necessary.",
+      "But armor that protects can also trap.",
+      "Imagine slowly removing one piece. Just one.",
+      "What's underneath it? What feeling has been waiting there?",
+      "Let it breathe. It's been compressed for too long."
+    ],
+    [
+      "Emotions live in the body. Where do you feel yours right now?",
+      "A tightness in the throat? A heaviness in the chest? A knot in the stomach?",
+      "Breathe directly into that spot. Imagine your breath reaching it.",
+      "You're not trying to make it go away. You're giving it attention.",
+      "Often, all a feeling needs is to be acknowledged."
+    ],
+    [
+      "If tears come, let them come. Tears are not falling apart. They're letting go.",
+      "If anger comes, let it be here too. It has a voice. What is it saying?",
+      "If sadness comes, welcome it like an old friend who's been standing at the door.",
+      "None of these feelings can hurt you. They've been hurting you by staying hidden.",
+      "Let them move through you. That's all they want to do."
+    ],
+    [
+      "Imagine gathering everything you've been carrying into a bundle.",
+      "Every expectation. Every disappointment. Every should-have and what-if.",
+      "Hold the bundle for a moment. Feel its weight.",
+      "Now imagine setting it down. Gently. On the ground beside you.",
+      "You can pick it back up later if you need to. But for now, your hands are free."
+    ]
+  ],
+  "closing": [
+    "What you just did takes immense courage.",
+    "Feeling is the bravest thing a person can do.",
+    "You may feel lighter now, or you may feel raw. Both are right.",
+    "Be gentle with yourself for the rest of today. You've done deep work.",
+    "Open your eyes when you're ready. You are a little freer now."
+  ]
+}

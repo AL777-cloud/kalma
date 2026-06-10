@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kálma Hub — Architecture</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a12; --bg2: #12121e; --bg3: #1a1a2a;
+      --text: #e8e4df; --dim: #8a8698; --accent: #b48eff; --accent2: #7b5ea7;
+      --border: rgba(255,255,255,0.08); --glow: rgba(180,142,255,0.15);
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { display: flex; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px; min-width: 240px;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      padding: 24px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .sidebar h1 {
+      font-size: 1.1rem; font-weight: 300; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--dim); margin-bottom: 24px;
+    }
+    .nav-btn {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: 8px; border: none;
+      background: transparent; color: var(--text); font-size: 0.9rem;
+      cursor: pointer; transition: background 0.2s;
+      text-align: left; width: 100%; text-decoration: none;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.05); }
+    .nav-btn.active { background: var(--glow); color: var(--accent); }
+    .nav-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .nav-label { font-weight: 400; }
+    .nav-sub { font-size: 0.75rem; color: var(--dim); margin-top: 2px; }
+
+    /* Main */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .toolbar {
+      padding: 16px 24px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 16px;
+      background: var(--bg2);
+    }
+    .toolbar h2 { font-size: 1rem; font-weight: 400; letter-spacing: 0.1em; }
+    .toolbar .badge {
+      font-size: 0.7rem; background: var(--accent2); color: #fff;
+      padding: 2px 8px; border-radius: 10px;
+    }
+
+    .content { flex: 1; overflow-y: auto; padding: 32px 40px; }
+
+    /* Architecture page styles */
+    .section-title {
+      font-size: 1.6rem; font-weight: 300; letter-spacing: 0.05em;
+      margin-bottom: 8px; color: var(--text);
+    }
+    .section-subtitle {
+      font-size: 0.9rem; color: var(--dim); margin-bottom: 24px; line-height: 1.6;
+    }
+    .prose {
+      font-size: 0.88rem; color: var(--dim); line-height: 1.7; margin-bottom: 20px;
+    }
+    .prose strong { color: var(--text); }
+
+    .intro-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px; margin-bottom: 40px;
+    }
+    .intro-card {
+      background: var(--bg3); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px; text-align: center;
+    }
+    .intro-card .value { font-size: 1.6rem; font-weight: 300; color: var(--accent); margin-bottom: 4px; }
+    .intro-card .label { font-size: 0.75rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.1em; }
+
+    .feature-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px; margin-bottom: 40px;
+    }
+    .feature-card {
+      background: var(--bg3); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px;
+    }
+    .feature-card h4 {
+      font-size: 0.9rem; font-weight: 500; color: var(--text); margin-bottom: 8px;
+    }
+    .feature-card p {
+      font-size: 0.82rem; color: var(--dim); line-height: 1.6;
+    }
+    .feature-card .tag {
+      display: inline-block; font-size: 0.65rem; padding: 2px 6px;
+      border-radius: 6px; margin-top: 10px; border: 1px solid var(--border); color: var(--dim);
+    }
+    .feature-card .tag.shared { border-color: #4ade80; color: #4ade80; }
+    .feature-card .tag.player { border-color: #60a5fa; color: #60a5fa; }
+    .feature-card .tag.wellness { border-color: #f59e0b; color: #f59e0b; }
+
+    .diagram-container {
+      background: var(--bg3); border: 1px solid var(--border); border-radius: 12px;
+      padding: 24px; margin-bottom: 32px; overflow-x: auto;
+    }
+    .diagram-container h3 {
+      font-size: 0.95rem; font-weight: 400; color: var(--text); margin-bottom: 16px;
+      letter-spacing: 0.05em;
+    }
+    .diagram-container svg { width: 100%; height: auto; display: block; }
+
+    .spec-list {
+      list-style: none; padding: 0; margin-bottom: 24px;
+    }
+    .spec-list li {
+      font-size: 0.84rem; color: var(--dim); padding: 6px 0;
+      border-bottom: 1px solid var(--border); line-height: 1.5;
+    }
+    .spec-list li:last-child { border-bottom: none; }
+    .spec-list li strong { color: var(--text); }
+
+    .divider {
+      border: none; border-top: 1px solid var(--border);
+      margin: 40px 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 700px) {
+      .sidebar { width: 60px; min-width: 60px; padding: 16px 8px; }
+      .sidebar h1, .nav-label, .nav-sub { display: none; }
+      .nav-btn { justify-content: center; padding: 10px; }
+      .content { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="sidebar">
+    <h1>Kálma Hub</h1>
+    <a class="nav-btn" href="./index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <div><div class="nav-label">Apps</div><div class="nav-sub">Both versions</div></div>
+    </a>
+    <a class="nav-btn active" href="./architecture.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><path d="M12 7v4M12 11l-5.5 6M12 11l5.5 6"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>
+      <div><div class="nav-label">Architecture</div><div class="nav-sub">System design</div></div>
+    </a>
+    <a class="nav-btn" href="./studio.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+      <div><div class="nav-label">Studio</div><div class="nav-sub">Instruments & Sound Design</div></div>
+    </a>
+    <a class="nav-btn" href="./architecture.html#assets">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+      <div><div class="nav-label">Assets</div><div class="nav-sub">Sounds, images</div></div>
+    </a>
+  </nav>
+
+  <div class="main">
+    <div class="toolbar">
+      <h2>System Architecture</h2>
+      <span class="badge">v4 · May 2026</span>
+    </div>
+
+    <div class="content">
+
+      <!-- Market Position -->
+      <h2 class="section-title">Music That Transforms With Your World</h2>
+      <p class="section-subtitle">
+        Kálma reads your environment and generates music that fits — right now.
+        Time of day, weather, movement, mood — all become inputs to an adaptive composition engine.
+      </p>
+
+      <div class="intro-grid">
+        <div class="intro-card">
+          <div class="value">$1.8B</div>
+          <div class="label">Market Today</div>
+        </div>
+        <div class="intro-card">
+          <div class="value">$7.4B</div>
+          <div class="label">By 2034</div>
+        </div>
+        <div class="intro-card">
+          <div class="value">17.1%</div>
+          <div class="label">CAGR</div>
+        </div>
+        <div class="intro-card">
+          <div class="value">42</div>
+          <div class="label">JS Modules</div>
+        </div>
+      </div>
+
+      <p class="prose">
+        AI-generated meditation and adaptive music is one of the fastest-growing segments in wellness tech.
+        Kálma positions itself at the intersection of <strong>generative music</strong>, <strong>contextual AI</strong>,
+        and <strong>therapeutic sound design</strong> — with two complementary products sharing a common engine core.
+      </p>
+
+      <hr class="divider">
+
+      <!-- Diagram 1: System Architecture -->
+      <div class="diagram-container">
+        <h3>1. System Architecture — Modules &amp; Data Flow</h3>
+        <svg viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg">
+          <!-- Background -->
+          <defs>
+            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#1a1a2a;stop-opacity:1"/>
+              <stop offset="100%" style="stop-color:#0a0a12;stop-opacity:1"/>
+            </linearGradient>
+          </defs>
+          <rect width="900" height="520" fill="url(#grad1)" rx="8"/>
+
+          <!-- Player box -->
+          <rect x="30" y="30" width="400" height="460" rx="8" fill="none" stroke="#60a5fa" stroke-width="1" stroke-dasharray="4,4" opacity="0.6"/>
+          <text x="50" y="55" fill="#60a5fa" font-size="12" font-family="system-ui">PLAYER (port 12002)</text>
+
+          <!-- Wellness box -->
+          <rect x="470" y="30" width="400" height="460" rx="8" fill="none" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4,4" opacity="0.6"/>
+          <text x="490" y="55" fill="#f59e0b" font-size="12" font-family="system-ui">WELLNESS (port 12001)</text>
+
+          <!-- Player modules -->
+          <rect x="50" y="75" width="160" height="40" rx="6" fill="#1e293b" stroke="#60a5fa" stroke-width="0.8"/>
+          <text x="130" y="100" fill="#e8e4df" font-size="11" text-anchor="middle" font-family="system-ui">Context Engine</text>
+
+          <rect x="250" y="75" width="160" height="40" rx="6" fill="#1e293b" stroke="#60a5fa" stroke-width="0.8"/>
+          <text x="330" y="100" fill="#e8e4df" font-size="11" text-anchor="middle" font-family="system-ui">LLM Mood (Gemini)</text>
+
+          <rect x="50" y="140" width="160" height="40" rx="6" fill="#1e293b" stroke="#60a5fa" stroke-width="0.8"/>
+          <text x="130" y="165" fill="#e8e4df" font-size="11" text-anchor="middle" font-family="system-ui">Movement System</text>
+
+          <rect x="250" y="140" width="160" height="40" rx="6" fill="#1e293b" stroke="#60a5fa" stroke-width="0.8"/>
+          <text x="330" y="165" fill="#e8e4df" font-size="11" text-anchor="middle" font-family="system-ui">Learning Engine</text>
+
+          <rect x="50" y="210" width="160" height="40" rx="6" fill="#1e293b" stroke="#60a5fa" stroke-width="0.8"/>
+          <text x="130" y="235" fill="#e8e4df" font-size="11" text-anchor="middle" font-family="system-ui">Visualizer</text>
+
+          <rect x="250" y="210" width="160" height="40" rx="6" fill="#1e293b" stroke="#60a5fa" stroke-width="0.8"/>
+          <text x="330" y="235" fill="#e8e4df" font-size="11" text-anchor="middle" font-family="system-ui">Beats Engine</text>
+
+          <!-- Wellness modules -->
+          <rect x="490" y="75" width="160" height="40" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="0.8"/>
+          <text x="570" y="100" fill="#e8e4df" font-size="11" text-anchor="middle" font-family="system-ui">Binaural Beats</text>
+
+          <rect x="690" y="75" width="160" height="40" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="0.8"/>
+          <text x="770" y="100" fill="#e8e4df" font-size="11" text-anchor="middle" font-family="system-ui">Isochronic Tones</text>
+
+          <rect x="490" y="140" width="160" height="40" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="0.8"/>
+          <text x="570" y="165" fill="#e8e4df" font-size="11" text-anchor="middle" font-family="system-ui">Meditation Engine</text>
+
+          <rect x="690" y="140" width="160" height="40" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="0.8"/>
+          <text x="770" y="165" fill="#e8e4df" font-size="11" text-anchor="middle" font-family="system-ui">Voice Guidance</text>
+
+          <rect x="490" y="210" width="160" height="40" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="0.8"/>
+          <text x="570" y="235" fill="#e8e4df" font-size="11" text-anchor="middle" font-family="system-ui">Ambience Engine</text>
+
+          <rect x="690" y="210" width="160" height="40" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="0.8"/>
+          <text x="770" y="235" fill="#e8e4df" font-size="11" text-anchor="middle" font-family="system-ui">Radio Streams</text>
+
+          <rect x="490" y="270" width="160" height="40" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="0.8"/>
+          <text x="570" y="295" fill="#e8e4df" font-size="11" text-anchor="middle" font-family="system-ui">Chakra Tuning</text>
+
+          <rect x="690" y="270" width="160" height="40" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="0.8"/>
+          <text x="770" y="295" fill="#e8e4df" font-size="11" text-anchor="middle" font-family="system-ui">Welcome Intents (8)</text>
+
+          <!-- Shared core (center bottom) -->
+          <rect x="200" y="340" width="500" height="130" rx="8" fill="rgba(74,222,128,0.05)" stroke="#4ade80" stroke-width="1.2"/>
+          <text x="450" y="365" fill="#4ade80" font-size="12" text-anchor="middle" font-family="system-ui" font-weight="500">SHARED ENGINE CORE</text>
+
+          <rect x="220" y="380" width="130" height="35" rx="5" fill="#1e293b" stroke="#4ade80" stroke-width="0.7"/>
+          <text x="285" y="402" fill="#e8e4df" font-size="10" text-anchor="middle" font-family="system-ui">MusicBrain</text>
+
+          <rect x="370" y="380" width="130" height="35" rx="5" fill="#1e293b" stroke="#4ade80" stroke-width="0.7"/>
+          <text x="435" y="402" fill="#e8e4df" font-size="10" text-anchor="middle" font-family="system-ui">AdaptiveEngine</text>
+
+          <rect x="520" y="380" width="130" height="35" rx="5" fill="#1e293b" stroke="#4ade80" stroke-width="0.7"/>
+          <text x="585" y="402" fill="#e8e4df" font-size="10" text-anchor="middle" font-family="system-ui">MelodyEngine</text>
+
+          <rect x="220" y="425" width="130" height="35" rx="5" fill="#1e293b" stroke="#4ade80" stroke-width="0.7"/>
+          <text x="285" y="447" fill="#e8e4df" font-size="10" text-anchor="middle" font-family="system-ui">PianoSampler</text>
+
+          <rect x="370" y="425" width="130" height="35" rx="5" fill="#1e293b" stroke="#4ade80" stroke-width="0.7"/>
+          <text x="435" y="447" fill="#e8e4df" font-size="10" text-anchor="middle" font-family="system-ui">VA/FM/WT Synths</text>
+
+          <rect x="520" y="425" width="130" height="35" rx="5" fill="#1e293b" stroke="#4ade80" stroke-width="0.7"/>
+          <text x="585" y="447" fill="#e8e4df" font-size="10" text-anchor="middle" font-family="system-ui">Reverb + EQ Chain</text>
+
+          <!-- Arrows from Player to Shared -->
+          <path d="M230 250 L350 340" fill="none" stroke="#60a5fa" stroke-width="0.8" opacity="0.5" marker-end="url(#arrowBlue)"/>
+          <!-- Arrows from Wellness to Shared -->
+          <path d="M670 310 L550 340" fill="none" stroke="#f59e0b" stroke-width="0.8" opacity="0.5" marker-end="url(#arrowAmber)"/>
+
+          <defs>
+            <marker id="arrowBlue" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6" fill="none" stroke="#60a5fa" stroke-width="1"/>
+            </marker>
+            <marker id="arrowAmber" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6" fill="none" stroke="#f59e0b" stroke-width="1"/>
+            </marker>
+          </defs>
+
+          <!-- Legend -->
+          <rect x="30" y="490" width="10" height="10" fill="#60a5fa" rx="2"/>
+          <text x="45" y="499" fill="#8a8698" font-size="9" font-family="system-ui">Player Only</text>
+          <rect x="130" y="490" width="10" height="10" fill="#f59e0b" rx="2"/>
+          <text x="145" y="499" fill="#8a8698" font-size="9" font-family="system-ui">Wellness Only</text>
+          <rect x="240" y="490" width="10" height="10" fill="#4ade80" rx="2"/>
+          <text x="255" y="499" fill="#8a8698" font-size="9" font-family="system-ui">Shared Core</text>
+        </svg>
+      </div>
+
+      <!-- Diagram 2: Audio Signal Flow -->
+      <div class="diagram-container">
+        <h3>2. Audio Signal Flow — Full Chain with EQ</h3>
+        <svg viewBox="0 0 900 300" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style="stop-color:#1a1a2a;stop-opacity:1"/>
+              <stop offset="100%" style="stop-color:#12121e;stop-opacity:1"/>
+            </linearGradient>
+            <marker id="arrowPurple" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6" fill="none" stroke="#b48eff" stroke-width="1"/>
+            </marker>
+          </defs>
+          <rect width="900" height="300" fill="url(#grad2)" rx="8"/>
+
+          <!-- Sources -->
+          <rect x="20" y="40" width="110" height="220" rx="6" fill="rgba(180,142,255,0.08)" stroke="#b48eff" stroke-width="0.8"/>
+          <text x="75" y="60" fill="#b48eff" font-size="9" text-anchor="middle" font-family="system-ui">SOURCES</text>
+          <text x="75" y="85" fill="#e8e4df" font-size="8.5" text-anchor="middle" font-family="system-ui">Drones/Pads</text>
+          <text x="75" y="102" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">pan +/-0.35</text>
+          <text x="75" y="125" fill="#e8e4df" font-size="8.5" text-anchor="middle" font-family="system-ui">Piano Engine v4</text>
+          <text x="75" y="148" fill="#e8e4df" font-size="8.5" text-anchor="middle" font-family="system-ui">VA/FM/WT Synths</text>
+          <text x="75" y="165" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">gain 0 default</text>
+          <text x="75" y="188" fill="#e8e4df" font-size="8.5" text-anchor="middle" font-family="system-ui">Beats Engine</text>
+          <text x="75" y="205" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">off by default</text>
+          <text x="75" y="228" fill="#e8e4df" font-size="8.5" text-anchor="middle" font-family="system-ui">Voices</text>
+          <text x="75" y="248" fill="#e8e4df" font-size="8.5" text-anchor="middle" font-family="system-ui">Layers/Ambience</text>
+
+          <!-- musicBus -->
+          <rect x="155" y="120" width="80" height="50" rx="6" fill="#1e293b" stroke="#b48eff" stroke-width="1"/>
+          <text x="195" y="142" fill="#e8e4df" font-size="9" text-anchor="middle" font-family="system-ui">musicBus</text>
+          <text x="195" y="158" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">gain 1.0</text>
+
+          <!-- Arrow sources to bus -->
+          <line x1="130" y1="145" x2="155" y2="145" stroke="#b48eff" stroke-width="1" marker-end="url(#arrowPurple)"/>
+
+          <!-- Split dry/reverb -->
+          <text x="265" y="100" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">dry/wet split</text>
+          <line x1="235" y1="145" x2="260" y2="145" stroke="#b48eff" stroke-width="1"/>
+
+          <!-- Reverb path -->
+          <rect x="260" y="55" width="100" height="45" rx="6" fill="#1e293b" stroke="#7b5ea7" stroke-width="0.8"/>
+          <text x="310" y="73" fill="#e8e4df" font-size="8.5" text-anchor="middle" font-family="system-ui">Convolver Reverb</text>
+          <text x="310" y="88" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">4.5s, pre-delay 45ms</text>
+          <line x1="260" y1="135" x2="280" y2="100" stroke="#7b5ea7" stroke-width="0.7" stroke-dasharray="3,3"/>
+          <line x1="360" y1="78" x2="390" y2="130" stroke="#7b5ea7" stroke-width="0.7" stroke-dasharray="3,3"/>
+
+          <!-- Reverb detail -->
+          <rect x="260" y="180" width="100" height="40" rx="6" fill="rgba(123,94,167,0.15)" stroke="#7b5ea7" stroke-width="0.5"/>
+          <text x="310" y="197" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">Early reflections</text>
+          <text x="310" y="211" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">L/R decorrelation</text>
+
+          <!-- Compressor -->
+          <rect x="390" y="120" width="100" height="55" rx="6" fill="#1e293b" stroke="#b48eff" stroke-width="1"/>
+          <text x="440" y="138" fill="#e8e4df" font-size="9" text-anchor="middle" font-family="system-ui">Compressor</text>
+          <text x="440" y="153" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">-10dB threshold</text>
+          <text x="440" y="165" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">ratio 2.5:1, knee 20dB</text>
+          <line x1="360" y1="145" x2="390" y2="145" stroke="#b48eff" stroke-width="1" marker-end="url(#arrowPurple)"/>
+
+          <!-- Warmth EQ -->
+          <rect x="515" y="120" width="100" height="50" rx="6" fill="#1e293b" stroke="#b48eff" stroke-width="1"/>
+          <text x="565" y="140" fill="#e8e4df" font-size="9" text-anchor="middle" font-family="system-ui">Warmth EQ</text>
+          <text x="565" y="155" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">low-shelf +1.5dB</text>
+          <text x="565" y="167" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">@ 200Hz</text>
+          <line x1="490" y1="145" x2="515" y2="145" stroke="#b48eff" stroke-width="1" marker-end="url(#arrowPurple)"/>
+
+          <!-- Air EQ -->
+          <rect x="640" y="120" width="100" height="50" rx="6" fill="#1e293b" stroke="#b48eff" stroke-width="1"/>
+          <text x="690" y="140" fill="#e8e4df" font-size="9" text-anchor="middle" font-family="system-ui">Air EQ</text>
+          <text x="690" y="155" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">high-shelf +2.5dB</text>
+          <text x="690" y="167" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">@ 6kHz</text>
+          <line x1="615" y1="145" x2="640" y2="145" stroke="#b48eff" stroke-width="1" marker-end="url(#arrowPurple)"/>
+
+          <!-- Master -->
+          <rect x="765" y="120" width="80" height="50" rx="6" fill="#1e293b" stroke="#4ade80" stroke-width="1"/>
+          <text x="805" y="140" fill="#e8e4df" font-size="9" text-anchor="middle" font-family="system-ui">Master</text>
+          <text x="805" y="157" fill="#4ade80" font-size="8" text-anchor="middle" font-family="system-ui">destination</text>
+          <line x1="740" y1="145" x2="765" y2="145" stroke="#b48eff" stroke-width="1" marker-end="url(#arrowPurple)"/>
+
+          <!-- Speaker icon -->
+          <text x="865" y="150" fill="#4ade80" font-size="14" text-anchor="middle" font-family="system-ui">Speakers</text>
+          <line x1="845" y1="145" x2="855" y2="145" stroke="#4ade80" stroke-width="1"/>
+
+          <!-- Attack label -->
+          <text x="440" y="195" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">attack 10ms</text>
+
+          <!-- Chain label -->
+          <text x="450" y="270" fill="#b48eff" font-size="10" text-anchor="middle" font-family="system-ui" opacity="0.7">Sources -&gt; musicBus -&gt; dry/reverb split -&gt; Compressor -&gt; Warmth EQ -&gt; Air EQ -&gt; Master -&gt; destination</text>
+        </svg>
+      </div>
+
+      <!-- Diagram 3: Context-to-Music Pipeline -->
+      <div class="diagram-container">
+        <h3>3. Context-to-Music Pipeline</h3>
+        <svg viewBox="0 0 900 380" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="grad3" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#1a1a2a;stop-opacity:1"/>
+              <stop offset="100%" style="stop-color:#0a0a12;stop-opacity:1"/>
+            </linearGradient>
+            <marker id="arrowWhite" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6" fill="none" stroke="#e8e4df" stroke-width="0.8"/>
+            </marker>
+          </defs>
+          <rect width="900" height="380" fill="url(#grad3)" rx="8"/>
+
+          <!-- Context inputs (left) -->
+          <text x="80" y="30" fill="#b48eff" font-size="11" text-anchor="middle" font-family="system-ui">CONTEXT INPUTS</text>
+
+          <rect x="20" y="45" width="120" height="32" rx="5" fill="#1e293b" stroke="rgba(255,255,255,0.15)" stroke-width="0.7"/>
+          <text x="80" y="66" fill="#e8e4df" font-size="9" text-anchor="middle" font-family="system-ui">Time of Day</text>
+
+          <rect x="20" y="85" width="120" height="32" rx="5" fill="#1e293b" stroke="rgba(255,255,255,0.15)" stroke-width="0.7"/>
+          <text x="80" y="106" fill="#e8e4df" font-size="9" text-anchor="middle" font-family="system-ui">Weather (Open-Meteo)</text>
+
+          <rect x="20" y="125" width="120" height="32" rx="5" fill="#1e293b" stroke="rgba(255,255,255,0.15)" stroke-width="0.7"/>
+          <text x="80" y="146" fill="#e8e4df" font-size="9" text-anchor="middle" font-family="system-ui">Season / Holidays</text>
+
+          <rect x="20" y="165" width="120" height="32" rx="5" fill="#1e293b" stroke="rgba(255,255,255,0.15)" stroke-width="0.7"/>
+          <text x="80" y="186" fill="#e8e4df" font-size="9" text-anchor="middle" font-family="system-ui">Device Motion</text>
+
+          <rect x="20" y="205" width="120" height="32" rx="5" fill="#1e293b" stroke="rgba(255,255,255,0.15)" stroke-width="0.7"/>
+          <text x="80" y="226" fill="#e8e4df" font-size="9" text-anchor="middle" font-family="system-ui">User Text (Mood)</text>
+
+          <!-- Context Engine -->
+          <rect x="190" y="80" width="140" height="100" rx="8" fill="rgba(180,142,255,0.08)" stroke="#b48eff" stroke-width="1"/>
+          <text x="260" y="110" fill="#b48eff" font-size="10" text-anchor="middle" font-family="system-ui" font-weight="500">Context Engine</text>
+          <text x="260" y="130" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Blend speed: 20%</text>
+          <text x="260" y="145" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">per update cycle</text>
+          <text x="260" y="165" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Continuous sensing</text>
+
+          <!-- Arrows context inputs to engine -->
+          <line x1="140" y1="61" x2="190" y2="110" stroke="rgba(255,255,255,0.3)" stroke-width="0.7" marker-end="url(#arrowWhite)"/>
+          <line x1="140" y1="101" x2="190" y2="120" stroke="rgba(255,255,255,0.3)" stroke-width="0.7" marker-end="url(#arrowWhite)"/>
+          <line x1="140" y1="141" x2="190" y2="135" stroke="rgba(255,255,255,0.3)" stroke-width="0.7" marker-end="url(#arrowWhite)"/>
+          <line x1="140" y1="181" x2="190" y2="150" stroke="rgba(255,255,255,0.3)" stroke-width="0.7" marker-end="url(#arrowWhite)"/>
+          <line x1="140" y1="221" x2="190" y2="165" stroke="rgba(255,255,255,0.3)" stroke-width="0.7" marker-end="url(#arrowWhite)"/>
+
+          <!-- MusicBrain -->
+          <rect x="380" y="55" width="160" height="80" rx="8" fill="rgba(180,142,255,0.08)" stroke="#b48eff" stroke-width="1"/>
+          <text x="460" y="80" fill="#b48eff" font-size="10" text-anchor="middle" font-family="system-ui" font-weight="500">MusicBrain</text>
+          <text x="460" y="97" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">200+ emotion patterns</text>
+          <text x="460" y="112" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Text weight: 0.7</text>
+          <text x="460" y="127" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Movement weight: 0.75</text>
+          <line x1="330" y1="120" x2="380" y2="100" stroke="#b48eff" stroke-width="0.8" marker-end="url(#arrowPurple)"/>
+
+          <!-- LLM Mood -->
+          <rect x="380" y="160" width="160" height="70" rx="8" fill="rgba(180,142,255,0.08)" stroke="#7b5ea7" stroke-width="1"/>
+          <text x="460" y="183" fill="#b48eff" font-size="10" text-anchor="middle" font-family="system-ui" font-weight="500">LLM Mood</text>
+          <text x="460" y="200" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Gemini 2.5 Flash Lite</text>
+          <text x="460" y="215" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">via OpenRouter</text>
+          <text x="460" y="228" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">rule-based fallback</text>
+          <line x1="330" y1="150" x2="380" y2="180" stroke="#7b5ea7" stroke-width="0.8" marker-end="url(#arrowPurple)"/>
+
+          <!-- AdaptiveEngine output -->
+          <rect x="600" y="90" width="160" height="90" rx="8" fill="rgba(74,222,128,0.08)" stroke="#4ade80" stroke-width="1"/>
+          <text x="680" y="115" fill="#4ade80" font-size="10" text-anchor="middle" font-family="system-ui" font-weight="500">AdaptiveEngine</text>
+          <text x="680" y="135" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Drone bed (evolving voices)</text>
+          <text x="680" y="150" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">15-35s voice lifetime</text>
+          <text x="680" y="165" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Chord pads 25-60s changes</text>
+          <line x1="540" y1="105" x2="600" y2="125" stroke="#4ade80" stroke-width="0.8" marker-end="url(#arrowPurple)"/>
+          <line x1="540" y1="185" x2="600" y2="155" stroke="#4ade80" stroke-width="0.8" marker-end="url(#arrowPurple)"/>
+
+          <!-- Output to audio -->
+          <rect x="810" y="110" width="70" height="50" rx="8" fill="#1e293b" stroke="#4ade80" stroke-width="1"/>
+          <text x="845" y="133" fill="#4ade80" font-size="9" text-anchor="middle" font-family="system-ui">Audio</text>
+          <text x="845" y="148" fill="#4ade80" font-size="9" text-anchor="middle" font-family="system-ui">Output</text>
+          <line x1="760" y1="135" x2="810" y2="135" stroke="#4ade80" stroke-width="1" marker-end="url(#arrowPurple)"/>
+
+          <!-- Movement detail (bottom) -->
+          <rect x="20" y="270" width="200" height="90" rx="8" fill="rgba(96,165,250,0.08)" stroke="#60a5fa" stroke-width="0.8"/>
+          <text x="120" y="293" fill="#60a5fa" font-size="9" text-anchor="middle" font-family="system-ui" font-weight="500">Movement System Detail</text>
+          <text x="120" y="312" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">DeviceMotion every 3s (90 samples)</text>
+          <text x="120" y="327" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Filter sweep fade-in: 2-3s</text>
+          <text x="120" y="342" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Filter-close fade-out: 3s</text>
+
+          <!-- Beats detail -->
+          <rect x="250" y="270" width="200" height="90" rx="8" fill="rgba(96,165,250,0.08)" stroke="#60a5fa" stroke-width="0.8"/>
+          <text x="350" y="293" fill="#60a5fa" font-size="9" text-anchor="middle" font-family="system-ui" font-weight="500">Beats Engine</text>
+          <text x="350" y="312" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">4 types: Upbeat, Grounded,</text>
+          <text x="350" y="327" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Dreamy, Energetic</text>
+          <text x="350" y="342" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">walking=dreamy, active=energetic</text>
+          <text x="350" y="357" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">4s fade in, movement-triggered</text>
+
+          <!-- Piano detail -->
+          <rect x="480" y="270" width="200" height="90" rx="8" fill="rgba(96,165,250,0.08)" stroke="#60a5fa" stroke-width="0.8"/>
+          <text x="580" y="293" fill="#60a5fa" font-size="9" text-anchor="middle" font-family="system-ui" font-weight="500">Piano Engine v4</text>
+          <text x="580" y="312" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Chord-aware picking (65% chord)</text>
+          <text x="580" y="327" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">45-60 BPM calm tempo</text>
+          <text x="580" y="342" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Two-hand Debussy-inspired</text>
+          <text x="580" y="357" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">Drone bed ducks but stays</text>
+
+          <!-- Learning detail -->
+          <rect x="710" y="270" width="170" height="90" rx="8" fill="rgba(245,158,11,0.08)" stroke="#f59e0b" stroke-width="0.8"/>
+          <text x="795" y="293" fill="#f59e0b" font-size="9" text-anchor="middle" font-family="system-ui" font-weight="500">Learning Engine</text>
+          <text x="795" y="312" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Like/dislike feedback</text>
+          <text x="795" y="327" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Per-parameter bias 0-30%</text>
+          <text x="795" y="342" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Preference history</text>
+          <text x="795" y="357" fill="#8a8698" font-size="7.5" text-anchor="middle" font-family="system-ui">Fed back to LLM context</text>
+
+          <!-- Arrow learning to LLM -->
+          <path d="M795 270 C 795 250, 540 240, 540 195" fill="none" stroke="#f59e0b" stroke-width="0.6" stroke-dasharray="3,3" marker-end="url(#arrowAmber)"/>
+        </svg>
+      </div>
+
+      <!-- Diagram 4: AI Intelligence Layer -->
+      <div class="diagram-container">
+        <h3>4. AI Intelligence Layer — LLM + Learning</h3>
+        <svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="grad4" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#12121e;stop-opacity:1"/>
+              <stop offset="100%" style="stop-color:#1a1a2a;stop-opacity:1"/>
+            </linearGradient>
+          </defs>
+          <rect width="900" height="340" fill="url(#grad4)" rx="8"/>
+
+          <!-- User input -->
+          <rect x="30" y="120" width="120" height="60" rx="8" fill="#1e293b" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+          <text x="90" y="145" fill="#e8e4df" font-size="10" text-anchor="middle" font-family="system-ui">User Input</text>
+          <text x="90" y="162" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">mood text, likes,</text>
+          <text x="90" y="175" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">motion data</text>
+
+          <!-- MusicBrain -->
+          <rect x="200" y="40" width="170" height="90" rx="8" fill="rgba(180,142,255,0.1)" stroke="#b48eff" stroke-width="1"/>
+          <text x="285" y="65" fill="#b48eff" font-size="10" text-anchor="middle" font-family="system-ui" font-weight="500">MusicBrain</text>
+          <text x="285" y="85" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">200+ emotion patterns</text>
+          <text x="285" y="100" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Semantic interpretation</text>
+          <text x="285" y="115" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Instant pattern matching</text>
+
+          <!-- LLM -->
+          <rect x="200" y="155" width="170" height="90" rx="8" fill="rgba(180,142,255,0.1)" stroke="#7b5ea7" stroke-width="1"/>
+          <text x="285" y="180" fill="#b48eff" font-size="10" text-anchor="middle" font-family="system-ui" font-weight="500">LLM Mood Engine</text>
+          <text x="285" y="198" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Gemini 2.5 Flash Lite</text>
+          <text x="285" y="213" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">OpenRouter API</text>
+          <text x="285" y="228" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Structured musical params</text>
+
+          <!-- Arrows from user to both -->
+          <line x1="150" y1="140" x2="200" y2="95" stroke="rgba(255,255,255,0.4)" stroke-width="0.8" marker-end="url(#arrowWhite)"/>
+          <line x1="150" y1="160" x2="200" y2="195" stroke="rgba(255,255,255,0.4)" stroke-width="0.8" marker-end="url(#arrowWhite)"/>
+
+          <!-- Merge / Decision -->
+          <rect x="430" y="105" width="130" height="70" rx="8" fill="rgba(74,222,128,0.08)" stroke="#4ade80" stroke-width="1"/>
+          <text x="495" y="130" fill="#4ade80" font-size="10" text-anchor="middle" font-family="system-ui" font-weight="500">Parameter Merge</text>
+          <text x="495" y="148" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">LLM primary when</text>
+          <text x="495" y="162" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">available; rule fallback</text>
+
+          <line x1="370" y1="90" x2="430" y2="130" stroke="#b48eff" stroke-width="0.8" marker-end="url(#arrowPurple)"/>
+          <line x1="370" y1="195" x2="430" y2="150" stroke="#7b5ea7" stroke-width="0.8" marker-end="url(#arrowPurple)"/>
+
+          <!-- Learning Engine -->
+          <rect x="200" y="265" width="170" height="60" rx="8" fill="rgba(245,158,11,0.1)" stroke="#f59e0b" stroke-width="1"/>
+          <text x="285" y="290" fill="#f59e0b" font-size="10" text-anchor="middle" font-family="system-ui" font-weight="500">Learning Engine</text>
+          <text x="285" y="307" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Per-parameter bias (0-30%)</text>
+          <text x="285" y="320" fill="#8a8698" font-size="8" text-anchor="middle" font-family="system-ui">Preference history to LLM</text>
+
+          <!-- Learning arrow back to LLM -->
+          <path d="M285 265 C 285 250, 285 248, 285 245" fill="none" stroke="#f59e0b" stroke-width="0.7" marker-end="url(#arrowAmber)"/>
+
+          <!-- Learning arrow to merge -->
+          <line x1="370" y1="290" x2="460" y2="175" stroke="#f59e0b" stroke-width="0.7" stroke-dasharray="3,3" marker-end="url(#arrowAmber)"/>
+
+          <!-- Output parameters -->
+          <rect x="620" y="80" width="250" height="170" rx="8" fill="rgba(74,222,128,0.05)" stroke="rgba(74,222,128,0.3)" stroke-width="0.8"/>
+          <text x="745" y="105" fill="#4ade80" font-size="10" text-anchor="middle" font-family="system-ui" font-weight="500">Musical Parameters Output</text>
+
+          <text x="640" y="130" fill="#8a8698" font-size="8.5" font-family="system-ui">tempo</text>
+          <text x="640" y="148" fill="#8a8698" font-size="8.5" font-family="system-ui">key / scale</text>
+          <text x="640" y="166" fill="#8a8698" font-size="8.5" font-family="system-ui">energy level</text>
+          <text x="640" y="184" fill="#8a8698" font-size="8.5" font-family="system-ui">brightness</text>
+          <text x="640" y="202" fill="#8a8698" font-size="8.5" font-family="system-ui">complexity</text>
+          <text x="640" y="220" fill="#8a8698" font-size="8.5" font-family="system-ui">reverb amount</text>
+          <text x="640" y="238" fill="#8a8698" font-size="8.5" font-family="system-ui">drone character</text>
+
+          <text x="780" y="130" fill="#8a8698" font-size="8.5" font-family="system-ui">harmonic density</text>
+          <text x="780" y="148" fill="#8a8698" font-size="8.5" font-family="system-ui">pad movement</text>
+          <text x="780" y="166" fill="#8a8698" font-size="8.5" font-family="system-ui">voice count</text>
+          <text x="780" y="184" fill="#8a8698" font-size="8.5" font-family="system-ui">filter cutoff</text>
+          <text x="780" y="202" fill="#8a8698" font-size="8.5" font-family="system-ui">stereo width</text>
+          <text x="780" y="220" fill="#8a8698" font-size="8.5" font-family="system-ui">motion reactivity</text>
+          <text x="780" y="238" fill="#8a8698" font-size="8.5" font-family="system-ui">beat probability</text>
+
+          <line x1="560" y1="140" x2="620" y2="140" stroke="#4ade80" stroke-width="1" marker-end="url(#arrowPurple)"/>
+
+          <!-- Feedback loop from output back to learning -->
+          <path d="M745 250 C 745 300, 500 320, 370 295" fill="none" stroke="#f59e0b" stroke-width="0.6" stroke-dasharray="4,3" marker-end="url(#arrowAmber)"/>
+          <text x="580" y="305" fill="#f59e0b" font-size="7.5" text-anchor="middle" font-family="system-ui">user feedback loop</text>
+        </svg>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Kálma Player Section -->
+      <h2 class="section-title" id="player">Kálma Player</h2>
+      <p class="section-subtitle">Port 12002 — Adaptive Music Companion · 20 JS files · 3 screens</p>
+
+      <p class="prose">
+        The Player is Kálma's flagship product: a generative music engine that responds to <strong>time of day</strong>,
+        <strong>weather</strong>, <strong>physical movement</strong>, and <strong>emotional context</strong> in real-time.
+        It creates an endless, evolving soundscape with an introspective base character — never repetitive, always contextual.
+      </p>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>Signal Chain</h4>
+          <p>Sources into musicBus (gain 1.0), dry/reverb split, through Compressor (-10dB threshold, ratio 2.5:1, soft knee 20dB, attack 10ms), Warmth EQ (low-shelf +1.5dB @ 200Hz), Air EQ (high-shelf +2.5dB @ 6kHz), to Master output.</p>
+          <span class="tag shared">Shared</span>
+        </div>
+        <div class="feature-card">
+          <h4>Reverb Engine</h4>
+          <p>4.5-second convolution reverb with physically-modeled early reflections, 45ms pre-delay, and stereo L/R decorrelation for immersive spatial depth.</p>
+          <span class="tag shared">Shared</span>
+        </div>
+        <div class="feature-card">
+          <h4>AdaptiveEngine</h4>
+          <p>Drone bed with evolving voices (15-35s lifetime), chord pads changing every 25-60s, introspective base character. The sonic foundation of all Kálma music.</p>
+          <span class="tag shared">Shared</span>
+        </div>
+        <div class="feature-card">
+          <h4>Context Engine</h4>
+          <p>Fuses time of day, weather (Open-Meteo API), season, holidays, and device motion. Blend speed 20% per update for smooth transitions between states.</p>
+          <span class="tag player">Player</span>
+        </div>
+        <div class="feature-card">
+          <h4>MusicBrain</h4>
+          <p>200+ emotion patterns with semantic interpretation. Text input weighted at 0.7, movement weight 0.75. Instant pattern matching for real-time responsiveness.</p>
+          <span class="tag shared">Shared</span>
+        </div>
+        <div class="feature-card">
+          <h4>LLM Mood Engine</h4>
+          <p>Gemini 2.5 Flash Lite via OpenRouter. Generates structured musical parameters from mood text. Rule-based fallback ensures zero-latency operation when API unavailable.</p>
+          <span class="tag player">Player</span>
+        </div>
+        <div class="feature-card">
+          <h4>Piano Engine v4</h4>
+          <p>Activated via "piano" in shift mood. Chord-aware note picking (65% chord tones), 45-60 BPM calm tempo. Two-hand Debussy-inspired performance. Drone bed ducks but stays alive.</p>
+          <span class="tag shared">Shared</span>
+        </div>
+        <div class="feature-card">
+          <h4>Beats Engine</h4>
+          <p>4 beat types: Upbeat, Grounded, Dreamy, Energetic. When Beats Adaptive is enabled, movement triggers beats (walking = dreamy, active = energetic). 4s fade-in. Off by default — user must enable Adaptive toggle or select a beat type manually.</p>
+          <span class="tag player">Player</span>
+        </div>
+        <div class="feature-card">
+          <h4>Movement System</h4>
+          <p>DeviceMotion analyzed every 3s (90 samples). Spawns reactive voices with filter sweep fade-in (2-3s) and filter-close fade-out (3s). Physical gesture becomes sound.</p>
+          <span class="tag player">Player</span>
+        </div>
+        <div class="feature-card">
+          <h4>Learning Engine</h4>
+          <p>Like/dislike feedback builds per-parameter bias (0-30%). Preference history fed back to LLM context for increasingly personalized compositions over time.</p>
+          <span class="tag player">Player</span>
+        </div>
+        <div class="feature-card">
+          <h4>Visualizer</h4>
+          <p>Sacred geometry patterns driven by frequency analysis. Real-time visual feedback synchronized to the audio engine's output.</p>
+          <span class="tag player">Player</span>
+        </div>
+        <div class="feature-card">
+          <h4>Sources</h4>
+          <p>Drones/Pads (stereo panned +/-0.35), Piano Engine, VA/FM/WT Synths (gain 0 default), Beats Engine, Movement-reactive Voices, Layers/Ambience.</p>
+          <span class="tag shared">Shared</span>
+        </div>
+      </div>
+
+      <h3 style="font-size:0.95rem;color:var(--text);margin-bottom:12px;font-weight:400;">Player Screen Flow</h3>
+      <ul class="spec-list">
+        <li><strong>Screen 1:</strong> Splash — brand intro and loading</li>
+        <li><strong>Screen 2:</strong> Begin Journey — mood input and context sensing</li>
+        <li><strong>Screen 3:</strong> Adaptive Player — live generative music with visualizer</li>
+      </ul>
+
+      <hr class="divider">
+
+      <!-- Kálma Wellness Section -->
+      <h2 class="section-title" id="wellness">Kálma Wellness</h2>
+      <p class="section-subtitle">Port 12001 — Therapeutic Sound App · 22 JS files + Service Worker</p>
+
+      <p class="prose">
+        Wellness extends the shared engine with <strong>therapeutic modalities</strong>: binaural beats, isochronic tones,
+        guided meditation, chakra tuning, and ambient radio streams. Built for the spiritual community and mindful living.
+        Architecture wraps the core: <strong>app.js → KalmaAudioEngine → EngineMusic → AdaptiveEngine</strong>.
+      </p>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>Binaural Beats</h4>
+          <p>Precisely tuned frequency differentials between left and right ears for brainwave entrainment. Supports delta, theta, alpha, beta, and gamma states.</p>
+          <span class="tag wellness">Wellness</span>
+        </div>
+        <div class="feature-card">
+          <h4>Isochronic Tones</h4>
+          <p>Single-channel rhythmic pulses that don't require headphones. Evenly spaced tones with distinct on/off patterns for auditory neural stimulation.</p>
+          <span class="tag wellness">Wellness</span>
+        </div>
+        <div class="feature-card">
+          <h4>Meditation Engine</h4>
+          <p>Structured meditation sessions with progressive relaxation, breath timing, and ambient soundscapes that evolve with session depth.</p>
+          <span class="tag wellness">Wellness</span>
+        </div>
+        <div class="feature-card">
+          <h4>Voice Guidance</h4>
+          <p>Custom voice guidance for chakra tuning and meditation. Gentle prompts synchronized with the musical environment.</p>
+          <span class="tag wellness">Wellness</span>
+        </div>
+        <div class="feature-card">
+          <h4>Ambience Engine</h4>
+          <p>Layered environmental soundscapes — rain, forest, ocean, wind. Dynamically mixed with the generative music engine output.</p>
+          <span class="tag wellness">Wellness</span>
+        </div>
+        <div class="feature-card">
+          <h4>Radio Streams</h4>
+          <p>Consciousness Stream and other curated audio feeds. Continuous therapeutic content delivery alongside the generative engine.</p>
+          <span class="tag wellness">Wellness</span>
+        </div>
+        <div class="feature-card">
+          <h4>Chakra Tuning</h4>
+          <p>Full 7-chakra tuning system with specific frequencies per energy center, custom voice guidance, and progressive activation sequences.</p>
+          <span class="tag wellness">Wellness</span>
+        </div>
+        <div class="feature-card">
+          <h4>Piano Mode</h4>
+          <p>Typing "piano" in shift mood activates MelodyEngine, stops instruments/chords, drones stay alive. Ported from Player with identical quality.</p>
+          <span class="tag shared">Shared</span>
+        </div>
+      </div>
+
+      <h3 style="font-size:0.95rem;color:var(--text);margin-bottom:12px;font-weight:400;">Welcome Intents (8 modes)</h3>
+      <ul class="spec-list">
+        <li><strong>Meditate</strong> — Guided meditation with breath timing</li>
+        <li><strong>Reading</strong> — Calm focus-enhancing background</li>
+        <li><strong>Sleep</strong> — Delta-wave entrainment and gentle drones</li>
+        <li><strong>Work</strong> — Alpha/beta focus frequencies with minimal distraction</li>
+        <li><strong>Pain Relief</strong> — Theta binaural beats with soothing pads</li>
+        <li><strong>Creative</strong> — Stimulating alpha patterns with varied textures</li>
+        <li><strong>Unwind</strong> — Progressive relaxation soundscape</li>
+        <li><strong>Uplift</strong> — Energizing tones with bright harmonic content</li>
+      </ul>
+
+      <hr class="divider">
+
+      <!-- Shared Components -->
+      <h2 class="section-title" id="assets">Shared Components</h2>
+      <p class="section-subtitle">Identical modules used by both Player and Wellness</p>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h4>engine-music-brain.js</h4>
+          <p>MusicBrain — 200+ emotion patterns mapped to musical parameters. Semantic text analysis and movement interpretation in a single module.</p>
+          <span class="tag shared">Shared</span>
+        </div>
+        <div class="feature-card">
+          <h4>engine-melody.js</h4>
+          <p>MelodyEngine — chord-aware piano note picking with 65% chord tones, two-hand voicing, Debussy-inspired phrasing at calm tempos.</p>
+          <span class="tag shared">Shared</span>
+        </div>
+        <div class="feature-card">
+          <h4>engine-piano-sampler.js</h4>
+          <p>PianoSampler — 24 multi-layered WAV samples covering the full register. Velocity-sensitive with natural decay modeling.</p>
+          <span class="tag shared">Shared</span>
+        </div>
+        <div class="feature-card">
+          <h4>VA / FM / Wavetable Synths</h4>
+          <p>Three synthesis engines: Virtual Analog (classic subtractive), FM (complex harmonics), and Wavetable (evolving timbres). Gain 0 by default.</p>
+          <span class="tag shared">Shared</span>
+        </div>
+        <div class="feature-card">
+          <h4>Compressor + EQ Chain</h4>
+          <p>Identical mastering chain: -10dB threshold, 2.5:1 ratio, 20dB soft knee, 10ms attack. Warmth EQ (+1.5dB @ 200Hz) and Air EQ (+2.5dB @ 6kHz).</p>
+          <span class="tag shared">Shared</span>
+        </div>
+        <div class="feature-card">
+          <h4>Reverb Impulse Generator</h4>
+          <p>Algorithmic impulse response creation: 4.5s tail, early reflections, 45ms pre-delay, stereo L/R decorrelation. No external IR files needed.</p>
+          <span class="tag shared">Shared</span>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Technical Summary -->
+      <h2 class="section-title">Technical Summary</h2>
+      <p class="section-subtitle">Architecture at a glance</p>
+
+      <div class="intro-grid">
+        <div class="intro-card">
+          <div class="value">20</div>
+          <div class="label">Player JS Files</div>
+        </div>
+        <div class="intro-card">
+          <div class="value">22</div>
+          <div class="label">Wellness JS Files</div>
+        </div>
+        <div class="intro-card">
+          <div class="value">6</div>
+          <div class="label">Shared Modules</div>
+        </div>
+        <div class="intro-card">
+          <div class="value">24</div>
+          <div class="label">Piano Samples</div>
+        </div>
+      </div>
+
+      <ul class="spec-list">
+        <li><strong>Runtime:</strong> Pure client-side Web Audio API — no server audio processing required</li>
+        <li><strong>AI Backend:</strong> Gemini 2.5 Flash Lite via OpenRouter (with rule-based fallback)</li>
+        <li><strong>Weather API:</strong> Open-Meteo (free, no key required)</li>
+        <li><strong>Piano Samples:</strong> 24 WAV files across full register, velocity-mapped</li>
+        <li><strong>Reverb:</strong> Algorithmically generated impulse response (no external files)</li>
+        <li><strong>Service Worker:</strong> Present in Wellness (disabled during development)</li>
+        <li><strong>Hosting:</strong> Player on port 12002, Wellness on port 12001, Hub on port 12003</li>
+      </ul>
+
+    </div>
+  </div>
+
+</body>
+</html>

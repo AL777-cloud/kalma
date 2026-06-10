@@ -1,0 +1,60 @@
+{
+  "style": "gratitude",
+  "name": "Gratitude Practice",
+  "voiceSettings": {
+    "rate": 0.84,
+    "pitch": 0.97
+  },
+  "intro": [
+    "Welcome. Right now, we're going to practice something simple but powerful.",
+    "Gratitude isn't about pretending everything is fine.",
+    "It's about finding what's real and good, even in the middle of what's hard.",
+    "Take a deep breath. Let your body settle.",
+    "Open your heart just a little. That's all it takes.",
+    "Let's begin."
+  ],
+  "body": [
+    [
+      "Think of your body. Not its flaws. Its function.",
+      "Your lungs are breathing without you asking them to.",
+      "Your heart is beating. Your eyes can see. Your ears can hear this voice.",
+      "These are not small things. They are miraculous things that we forget to notice.",
+      "Take a moment to silently say thank you to your body for carrying you this far."
+    ],
+    [
+      "Now think of one person who has shown you kindness.",
+      "It doesn't have to be someone close. Maybe a stranger who smiled. A friend who listened.",
+      "Hold their face in your mind. Feel what their kindness meant to you.",
+      "We are held by more love than we usually let ourselves feel.",
+      "Silently thank that person. Let the warmth of it fill your chest."
+    ],
+    [
+      "Think of something simple that brought you comfort recently.",
+      "A warm drink. Sunlight through a window. A song that hit just right.",
+      "Happiness doesn't always come in big moments. It hides in small ones.",
+      "The ones we rush past. The ones we forget by evening.",
+      "Right now, remember one. Savor it. Let it matter."
+    ],
+    [
+      "Consider a difficulty you've faced. Something that was genuinely hard.",
+      "Can you find one thing it taught you? One way it shaped you?",
+      "This isn't about toxic positivity. It's about recognizing your own growth.",
+      "The hard things didn't break you. They built something in you.",
+      "You can be grateful for the lesson without being grateful for the pain."
+    ],
+    [
+      "Finally, turn the gratitude inward.",
+      "Thank yourself for showing up today. For choosing to pause and feel.",
+      "In a world that moves so fast, you slowed down. That's not nothing.",
+      "You are doing better than you think.",
+      "Breathe in. You are a gift. Not just to others. To yourself."
+    ]
+  ],
+  "closing": [
+    "As this practice ends, let the feeling of gratitude stay warm in your chest.",
+    "You don't have to hold onto it tightly. It will echo.",
+    "Tomorrow, try to notice one small good thing. Just one.",
+    "That's how this practice grows. One moment at a time.",
+    "Open your eyes gently. The world looks a little different now."
+  ]
+}

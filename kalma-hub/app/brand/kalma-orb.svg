@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 360" width="400" height="360">
+  <defs>
+    <radialGradient id="t1" cx="50%" cy="50%"><stop offset="0%" stop-color="#8cb4ff" stop-opacity="0.25"/><stop offset="70%" stop-color="#8cb4ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="t2" cx="50%" cy="50%"><stop offset="0%" stop-color="#c8aaff" stop-opacity="0.3"/><stop offset="70%" stop-color="#c8aaff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="t3" cx="50%" cy="50%"><stop offset="0%" stop-color="#ffc8dc" stop-opacity="0.3"/><stop offset="70%" stop-color="#ffbed2" stop-opacity="0"/></radialGradient>
+    <radialGradient id="t4" cx="50%" cy="50%"><stop offset="0%" stop-color="#b4ffb4" stop-opacity="0.5"/><stop offset="70%" stop-color="#b4ffb4" stop-opacity="0"/></radialGradient>
+    <radialGradient id="tc" cx="50%" cy="50%"><stop offset="0%" stop-color="#dcffdc" stop-opacity="0.6"/><stop offset="70%" stop-color="#c8ffc8" stop-opacity="0"/></radialGradient>
+  </defs>
+  <circle cx="200" cy="180" r="150" fill="url(#t1)"/>
+  <circle cx="200" cy="180" r="112" fill="url(#t2)"/>
+  <circle cx="200" cy="180" r="82" fill="url(#t3)"/>
+  <circle cx="200" cy="180" r="52" fill="url(#t4)"/>
+  <circle cx="200" cy="180" r="30" fill="url(#tc)"/>
+</svg>

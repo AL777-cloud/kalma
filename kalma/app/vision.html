@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kálma — Vision & Innovation Strategy</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: linear-gradient(180deg, #0e0b1a 0%, #150f26 50%, #0e0b1a 100%); color: #e0ddf0; font-family: 'Inter', -apple-system, sans-serif; line-height: 1.8; padding: 40px 24px; max-width: 800px; margin: 0 auto; }
+        h1 { font-family: Georgia, serif; font-size: 2.5rem; font-weight: 300; color: #fff; margin-bottom: 8px; }
+        h2 { font-family: Georgia, serif; font-size: 1.6rem; font-weight: 400; color: #8b83ff; margin-top: 48px; margin-bottom: 16px; border-bottom: 1px solid rgba(139,131,255,0.15); padding-bottom: 8px; }
+        h3 { font-size: 1.2rem; color: #fff; margin-top: 32px; margin-bottom: 12px; }
+        p { margin-bottom: 16px; color: #b0adc0; font-size: 0.95rem; }
+        em { color: #9a96b0; }
+        strong { color: #e8e6f0; }
+        ul, ol { margin: 12px 0 16px 24px; color: #b0adc0; font-size: 0.95rem; }
+        li { margin-bottom: 8px; }
+        hr { border: none; border-top: 1px solid rgba(139,131,255,0.1); margin: 40px 0; }
+        .tagline { font-family: Georgia, serif; font-style: italic; color: #8b83ff; font-size: 1.15rem; margin-bottom: 32px; }
+        .highlight { background: rgba(139,131,255,0.08); border-left: 3px solid #8b83ff; padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 16px 0; }
+        .highlight p { margin-bottom: 0; color: #d0cde0; }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.85rem; }
+        th { text-align: left; padding: 10px 12px; background: rgba(139,131,255,0.1); color: #8b83ff; border-bottom: 1px solid rgba(139,131,255,0.2); }
+        td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #b0adc0; }
+        .pitch { text-align: center; font-family: Georgia, serif; font-size: 1.1rem; color: #e8e6f0; padding: 32px 24px; background: rgba(139,131,255,0.06); border-radius: 12px; margin: 32px 0; line-height: 1.7; }
+        .closing { text-align: center; font-style: italic; color: #8b83ff; font-family: Georgia, serif; font-size: 1.05rem; margin-top: 40px; }
+
+        @media (max-width: 600px) { body { padding: 24px 16px; } h1 { font-size: 1.8rem; } h2 { font-size: 1.3rem; } h3 { font-size: 1.05rem; } }
+    </style>
+</head>
+<body>
+<script>
+let musicStarted = false;
+function tryStartMusic() {
+  if (musicStarted) return;
+  musicStarted = true;
+
+  // Try audio file first (desktop), fall back to Web Audio synth (mobile)
+  const music = new Audio('./audio/ui/welcome-drone.wav');
+  music.loop = true;
+  music.setAttribute('playsinline', 'true');
+  music.volume = 0;
+
+  const fileTimeout = setTimeout(() => {
+    // File taking too long (large WAV on mobile) — use synth
+    startSynthDrone();
+  }, 3000);
+
+  music.play().then(() => {
+    clearTimeout(fileTimeout);
+    let vol = 0;
+    const fade = setInterval(() => {
+      vol += 0.01;
+      if (vol >= 0.12) { vol = 0.12; clearInterval(fade); }
+      music.volume = vol;
+    }, 50);
+  }).catch(() => {
+    clearTimeout(fileTimeout);
+    startSynthDrone();
+  });
+}
+
+function startSynthDrone() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    const master = ctx.createGain();
+    master.gain.value = 0;
+    master.gain.setTargetAtTime(0.06, ctx.currentTime, 1.5);
+    master.connect(ctx.destination);
+    const freqs = [130.81, 164.81, 196];
+    freqs.forEach(freq => {
+      for (let d = 0; d < 2; d++) {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        osc.detune.value = (d === 0 ? -8 : 8);
+        const lfo = ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.value = 0.02 + Math.random() * 0.03;
+        const lfoG = ctx.createGain();
+        lfoG.gain.value = 2;
+        lfo.connect(lfoG); lfoG.connect(osc.frequency);
+        lfo.start();
+        osc.connect(master); osc.start();
+      }
+    });
+    const filt = ctx.createBiquadFilter();
+    filt.type = 'lowpass'; filt.frequency.value = 400;
+    master.disconnect(); master.connect(filt); filt.connect(ctx.destination);
+  } catch(e) {}
+}
+</script>
+
+<div id="entry-overlay" onclick="this.style.opacity='0';setTimeout(()=>this.style.display='none',1200);tryStartMusic()" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#0a0a12;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:opacity 1.2s ease">
+  <div style="position:relative;width:70vmin;height:70vmin;max-width:400px;max-height:400px;display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+    <div style="position:absolute;top:50%;left:50%;width:100%;height:100%;border-radius:50%;background:radial-gradient(circle,rgba(140,180,255,0.25) 0%,rgba(140,180,255,0.08) 50%,transparent 70%);transform:translate(-50%,-50%);animation:vBreathe 8s ease-in-out infinite"></div>
+    <div style="position:absolute;top:50%;left:50%;width:75%;height:75%;border-radius:50%;background:radial-gradient(circle,rgba(200,170,255,0.3) 0%,rgba(200,170,255,0.08) 50%,transparent 70%);transform:translate(-50%,-50%);animation:vBreathe 8s ease-in-out infinite 2s"></div>
+    <div style="position:absolute;top:50%;left:50%;width:55%;height:55%;border-radius:50%;background:radial-gradient(circle,rgba(255,200,220,0.3) 0%,rgba(255,190,210,0.1) 50%,transparent 70%);transform:translate(-50%,-50%);animation:vBreathe 8s ease-in-out infinite 4s"></div>
+    <div style="position:absolute;top:50%;left:50%;width:35%;height:35%;border-radius:50%;background:radial-gradient(circle,rgba(180,255,180,0.5) 0%,rgba(180,255,180,0.15) 50%,transparent 70%);transform:translate(-50%,-50%);animation:vBreathe 8s ease-in-out infinite 6s"></div>
+    <h2 style="font-family:Georgia,serif;font-size:3rem;font-weight:300;letter-spacing:0.2em;color:rgba(255,255,255,0.92);position:relative;z-index:1;text-shadow:0 0 40px rgba(180,255,180,0.15)">Kálma</h2>
+  </div>
+  <p style="font-size:0.8rem;color:rgba(255,255,255,0.3);letter-spacing:0.1em;animation:vPulse 3s ease-in-out infinite">Tap anywhere to enter</p>
+</div>
+<style>
+@keyframes vBreathe { 0%,100% { transform:translate(-50%,-50%) scale(1); opacity:.7; } 50% { transform:translate(-50%,-50%) scale(1.06); opacity:1; } }
+@keyframes vPulse { 0%,100% { opacity:.3; } 50% { opacity:.55; } }
+</style>
+<h1>Kálma</h1>
+<p class="tagline">"Sound that listens back."</p>
+
+<h2>The Opportunity</h2>
+<p>The music therapy market is projected at <strong>$3.6B in 2025</strong>, growing at <strong>13.5% CAGR</strong> to over $8B by 2032. Sound therapy is even larger. Mental health apps (Calm, Headspace) have proven the consumer appetite, but they're fundamentally <strong>one-directional</strong> — pre-recorded content delivered to passive listeners.</p>
+<div class="highlight"><p><strong>Kálma's edge: the sound responds to YOU.</strong><br>Not a playlist. Not a library. A living, adaptive sound environment that reads your emotional state and evolves in real time. That's the shift from "music as product" to "music as relationship."</p></div>
+
+<hr>
+
+<h2>10 Innovation Directions</h2>
+
+<h3><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1" width="20" height="20" style="vertical-align:middle;margin-right:8px;color:#8b83ff"><circle cx="16" cy="16" r="12"/><path d="M10 16h4l2-6 2 12 2-6h4" opacity=".6"/></svg>1. ADHD Focus Therapy</h3>
+<p><strong>The Problem:</strong> 366 million adults worldwide have ADHD. Medication helps but has side effects. Many can't afford or access treatment.</p>
+<p><strong>The Innovation:</strong> Kálma generates personalized binaural beats at beta/alpha frequencies (13-30 Hz) clinically shown to improve sustained attention in ADHD subjects. Combined with adaptive lo-fi music that responds to how long the user has been focused, it becomes a non-pharmaceutical focus aid.</p>
+<p><strong>Revenue:</strong> Prescription Digital Therapeutic (PDTx) — insurance-reimbursable. FDA pathway exists for "Software as Medical Device."</p>
+
+<h3><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1" width="20" height="20" style="vertical-align:middle;margin-right:8px;color:#8b83ff"><path d="M22 8a10 10 0 1 0 0 16A8 8 0 0 1 22 8z"/><circle cx="10" cy="26" r="1" opacity=".3"/></svg>2. AI Sleep Architect</h3>
+<p><strong>The Problem:</strong> 70 million Americans have chronic sleep disorders. Sleep apps help, but they're generic — same sounds for everyone.</p>
+<p><strong>The Innovation:</strong> Kálma monitors sleep phases via Apple Watch/wearable HRV data, and <strong>adapts the sound in real time</strong>:</p>
+<ul>
+<li><strong>Awake → falling asleep:</strong> Gradually shift from ambient to delta-frequency binaural beats</li>
+<li><strong>Light sleep → deep sleep:</strong> Transition to pure drone/minimal</li>
+<li><strong>REM detected:</strong> Gently adjust to prevent disturbance</li>
+<li><strong>Waking up:</strong> Slowly introduce brighter frequencies</li>
+</ul>
+<p>Nobody does this. Endel adapts to circadian rhythms but not to real-time sleep phases.</p>
+
+<h3><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1" width="20" height="20" style="vertical-align:middle;margin-right:8px;color:#8b83ff"><circle cx="16" cy="16" r="4"/><circle cx="16" cy="16" r="8" opacity=".4"/><circle cx="16" cy="16" r="12" opacity=".2"/><path d="M4 16h4M24 16h4" opacity=".3"/></svg>3. Tinnitus Relief Engine</h3>
+<p><strong>The Problem:</strong> 750 million people worldwide suffer from tinnitus. A Phase II clinical trial (Newcastle University, 2025) proved that personalized sound therapy delivered via smartphones can reduce tinnitus loudness.</p>
+<p><strong>The Innovation:</strong> Kálma generates a personalized tinnitus masking frequency based on the user's specific tinnitus pitch. The therapeutic sound is woven INTO the meditation/ambient music — so it feels like healing, not treatment. Over time, Kálma learns which frequencies provide the most relief.</p>
+<div class="highlight"><p><strong>This alone could be a billion-dollar feature.</strong></p></div>
+
+<h3><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1" width="20" height="20" style="vertical-align:middle;margin-right:8px;color:#8b83ff"><path d="M16 28 C16 28 4 20 4 12 A8 8 0 0 1 16 8" opacity=".5"/><path d="M16 28 C16 28 28 20 28 12 A8 8 0 0 0 16 8" opacity=".5"/><line x1="12" y1="14" x2="20" y2="22" opacity=".3"/></svg>4. PTSD & Trauma Processing</h3>
+<p><strong>The Problem:</strong> Sound wave therapy (2025, Science Daily) can directly target deep brain regions, significantly reducing PTSD, depression, and anxiety symptoms.</p>
+<p><strong>The Innovation:</strong></p>
+<ul>
+<li><strong>Bilateral stimulation</strong> (alternating left/right audio) — used in EMDR therapy</li>
+<li><strong>Voice guidance</strong> trained on trauma-informed approaches</li>
+<li><strong>Music that responds to emotional state</strong> — "I'm reliving it" → grounding frequencies</li>
+<li><strong>Heart rate monitoring</strong> — stress spike → sound automatically calms</li>
+</ul>
+
+<h3><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1" width="20" height="20" style="vertical-align:middle;margin-right:8px;color:#8b83ff"><circle cx="10" cy="22" r="4"/><circle cx="22" cy="18" r="4"/><line x1="14" y1="22" x2="14" y2="8"/><line x1="26" y1="18" x2="26" y2="6"/><path d="M14 8l12-2" opacity=".4"/></svg>5. AI Music Collaboration (Suno/Udio Partnership)</h3>
+<p><strong>The Problem:</strong> AI music generators create songs, but they're entertainment tools. They don't solve problems.</p>
+<p><strong>The Innovation:</strong> Kálma becomes the <strong>therapeutic layer on top of AI music generation</strong>:</p>
+<ul>
+<li>User describes their emotional state</li>
+<li>Kálma generates a therapeutic music prompt (mood, tempo, key, instruments, binaural frequency)</li>
+<li>Suno/Udio API generates the actual music</li>
+<li>Kálma mixes in binaural beats, isochronic tones, and voice guidance</li>
+<li>Result: <strong>AI-generated personalized therapeutic music</strong> — unique every session</li>
+</ul>
+<div class="highlight"><p><strong>This is the most commercially explosive direction.</strong> Suno/Udio gets a new B2B channel into healthcare/wellness.</p></div>
+
+<h3><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1" width="20" height="20" style="vertical-align:middle;margin-right:8px;color:#8b83ff"><circle cx="16" cy="12" r="6"/><path d="M8 28c0-6 4-10 8-10s8 4 8 10" opacity=".4"/></svg>6. Infant & Pediatric Sound Therapy</h3>
+<p><strong>The Problem:</strong> NICU babies, children with autism, pediatric anxiety. Parents need non-pharmaceutical solutions.</p>
+<ul>
+<li><strong>NICU mode:</strong> Heartbeat-synced lullabies at the mother's voice frequency</li>
+<li><strong>Autism sensory regulation:</strong> Customizable soundscapes for sensory overload</li>
+<li><strong>Pediatric anxiety:</strong> Guided audio "adventures" not "therapy"</li>
+</ul>
+
+<h3><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1" width="20" height="20" style="vertical-align:middle;margin-right:8px;color:#8b83ff"><rect x="6" y="10" width="20" height="16" rx="2" opacity=".4"/><line x1="16" y1="4" x2="16" y2="10"/><line x1="12" y1="7" x2="20" y2="7"/></svg>7. Hospital Sound Environment</h3>
+<p><strong>The Problem:</strong> Hospital noise contributes to patient stress, poor sleep, and slower recovery.</p>
+<ul>
+<li>Adapts to vital signs from hospital monitors</li>
+<li>Pre-surgery: calming frequencies to reduce anesthesia needs</li>
+<li>Post-surgery: pain-reduction frequencies (40 Hz gamma)</li>
+<li>ICU: reduces delirium through day/night sound cycling</li>
+</ul>
+
+<h3><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1" width="20" height="20" style="vertical-align:middle;margin-right:8px;color:#8b83ff"><rect x="4" y="8" width="24" height="16" rx="2" opacity=".4"/><circle cx="16" cy="16" r="4"/><path d="M16 12v8M12 16h8" opacity=".3"/></svg>8. Corporate Wellness Platform</h3>
+<p><strong>The Problem:</strong> $51B corporate wellness market. Employers need tools for employee mental health.</p>
+<ul>
+<li>Focus mode during deep work (Slack/Teams integration)</li>
+<li>Recovery mode after stressful meetings</li>
+<li>Team meditation — synchronized sessions</li>
+<li>Manager dashboard with anonymous aggregate data</li>
+</ul>
+
+<h3><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1" width="20" height="20" style="vertical-align:middle;margin-right:8px;color:#8b83ff"><rect x="10" y="4" width="12" height="24" rx="3" opacity=".4"/><circle cx="16" cy="16" r="4"/><path d="M13 16h2l1-3 1 6 1-3h2" opacity=".6"/></svg>9. Wearable Biofeedback Loop</h3>
+<p><strong>The Problem:</strong> Apple Watch, Oura, Whoop measure HRV but just show numbers. They don't <em>do</em> anything.</p>
+<ul>
+<li><strong>High stress detected</strong> → "You seem tense. Want a 3-minute reset?"</li>
+<li><strong>HRV improving during session</strong> → music brightens (positive reinforcement)</li>
+<li><strong>Heart rate elevated</strong> → sound deepens, slows tempo</li>
+<li><strong>Sleep quality declining</strong> → recommends frequency protocols</li>
+</ul>
+
+<h3><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1" width="20" height="20" style="vertical-align:middle;margin-right:8px;color:#8b83ff"><circle cx="16" cy="16" r="12"/><ellipse cx="16" cy="16" rx="6" ry="12" opacity=".4"/><line x1="4" y1="16" x2="28" y2="16" opacity=".3"/></svg>10. Consciousness Stream Network</h3>
+<p><strong>The Problem:</strong> People feel disconnected. Spirituality is growing but fragmented.</p>
+<ul>
+<li><strong>Live collaborative meditations</strong> — thousands in the same sound space</li>
+<li><strong>Collective mood visualization</strong> — see the global Kálma community's emotional state</li>
+<li><strong>Sound offerings</strong> — send a healing sound to someone</li>
+<li><strong>11:11 Events</strong> — synchronized global meditations</li>
+<li><strong>Musician marketplace</strong> — create and sell therapeutic sound packs</li>
+</ul>
+
+<hr>
+
+<h2>Prioritized Roadmap</h2>
+<p><strong>Phase 1 — NOW:</strong> ✅ Demo/MVP built</p>
+<p><strong>Phase 2 — VALIDATE (3 months):</strong> AI music integration (Suno), Apple Watch HRV, Tinnitus tuning, Clinical pilot</p>
+<p><strong>Phase 3 — SCALE (6-12 months):</strong> Native app, Corporate wellness, ADHD trial, Suno partnership</p>
+<p><strong>Phase 4 — TRANSFORM (12-24 months):</strong> FDA Digital Therapeutic, Hospital pilot, Consciousness Stream Network, Series A</p>
+
+<h2>Revenue Model Evolution</h2>
+<table>
+<tr><th>Phase</th><th>Model</th><th>Target</th></tr>
+<tr><td>Now</td><td>Free demo</td><td>Prove concept</td></tr>
+<tr><td>3 months</td><td>Freemium + Premium ($9.99/mo)</td><td>Consumers</td></tr>
+<tr><td>6 months</td><td>+ Corporate ($5/employee/mo)</td><td>Employers</td></tr>
+<tr><td>12 months</td><td>+ Clinical ($29.99/mo or insurance)</td><td>Patients</td></tr>
+<tr><td>18 months</td><td>+ Hospital B2B ($50/bed/mo)</td><td>Health systems</td></tr>
+<tr><td>24 months</td><td>+ Marketplace (30% commission)</td><td>Musicians/Therapists</td></tr>
+</table>
+
+<hr>
+
+<div class="pitch">
+<strong>Kálma is the first sound platform that listens to how you feel and creates a therapeutic experience that evolves with you in real time — powered by AI, validated by science, and built to heal.</strong>
+</div>
+
+<p class="closing">"We don't make music for people. We make music WITH people."</p>
+
+</body>
+</html>

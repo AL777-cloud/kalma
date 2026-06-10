@@ -1,0 +1,2066 @@
+/* Kálma Player - Adaptive Music Engine v4
+   Conductor-driven approach: a shared Phrase Engine gives all instruments
+   a sense of musical time, tension arcs, and phrasing.
+   Drones breathe with the phrase. Chords change on musical boundaries.
+   The music has memory - it brings back earlier ideas. */
+
+class AdaptiveEngine {
+  constructor(core) {
+    this.core = core;
+    this.ctx = core.ctx;
+    this.output = core.musicBus;
+    this.running = false;
+    this._analyser = null;
+
+    // Music Brain - semantic-to-music intelligence
+    this.brain = new MusicBrain();
+
+    // Phrase Engine - the musical conductor
+    this.phrase = new PhraseEngine();
+    this.phrase.onChange(evt => this._onPhraseEvent(evt));
+
+    // Drone breathing (sidechain-like pulse synced to phrase)
+    this._breathLFO = null;
+    this._breathGain = null;
+
+    // Simple voice pool (texture drones)
+    this.voices = [];
+    this.padGain = null;
+    this.evolveTimer = null;
+    this.chordTimer = null;
+
+    // Real instruments - each gets its own quiet bus + stereo panner
+    this._vaPan = this.ctx.createStereoPanner();
+    this._vaPan.pan.value = -0.3; // slightly left
+    this._vaPan.connect(this.output);
+    this._vaBus = this.ctx.createGain();
+    this._vaBus.gain.value = 0.5;
+    this._vaBus.connect(this._vaPan);
+
+    this._fmPan = this.ctx.createStereoPanner();
+    this._fmPan.pan.value = 0.25; // slightly right
+    this._fmPan.connect(this.output);
+    this._fmBus = this.ctx.createGain();
+    this._fmBus.gain.value = 0.35;
+    this._fmBus.connect(this._fmPan);
+
+    this._wtPan = this.ctx.createStereoPanner();
+    this._wtPan.pan.value = 0.0; // center (unison spread handled by WavetableSynth)
+    this._wtPan.connect(this.output);
+    this._wtBus = this.ctx.createGain();
+    this._wtBus.gain.value = 0.4;
+    this._wtBus.connect(this._wtPan);
+
+    this.vaSynth = new VASynth(this.ctx, this._vaBus);
+    this.vaSynth.setParam('masterGain', 0.5);
+    this.vaSynth.loadPreset('Ambient Drone');
+
+    this.fmSynth = new FMSynth(this.ctx, this._fmBus);
+    this.fmSynth.setParam('masterGain', 0.3);
+    this.fmSynth.loadPreset('Evolving Texture');
+
+    this.wavetable = new WavetableSynth(this.ctx, this._wtBus);
+    this.wavetable.setParam('masterGain', 0.3);
+    this.wavetable.loadPreset('Cinematic Pad');
+
+    // Instrument voice tracking
+    this._vaNote = null;
+    this._fmNote = null;
+    this._wtNote = null;
+    this._instTimer = null;
+
+    // Pad voice panning alternation counter
+    this._padVoiceCount = 0;
+
+    // Melody engine - sporadic melodic phrases
+    this._melodyPan = this.ctx.createStereoPanner();
+    this._melodyPan.pan.value = 0.0; // center
+    this._melodyPan.connect(this.output);
+    this._melodyBus = this.ctx.createGain();
+    this._melodyBus.gain.value = 0.4;
+    this._melodyBus.connect(this._melodyPan);
+    this.melody = new MelodyEngine(this.ctx, this._melodyBus);
+
+    // Breathing gain node - sits between pad/drone outputs and master
+    // Creates a gentle sidechain-like pump that makes drones feel alive
+    this._breathGain = this.ctx.createGain();
+    this._breathGain.gain.value = 1;
+
+    // Beats engine - auto-triggers on movement
+    this._beatsPan = this.ctx.createStereoPanner();
+    this._beatsPan.pan.value = 0.0; // center
+    this._beatsPan.connect(this.output);
+    this._beatsBus = this.ctx.createGain();
+    this._beatsBus.gain.value = 0.7; // louder default - match main music level
+    this._beatsBus.connect(this._beatsPan);
+    this.beats = new KalmaBeats(this.ctx, this._beatsBus);
+    this._beatsActive = false;
+    this._beatsEnabled = true; // user toggle - ON by default (Adaptive Mode)
+    this._beatsStopId = 0; // monotonic counter to cancel stale stop timeouts
+    this._manualBeatMode = false; // true when user selects a Beat Type from drawer
+    this._lastMovement = 'still';
+    // Walking intermittent beat state
+    this._walkingBeatTimer = null;
+    this._walkingBeatCooldown = null;
+    this._walkingBeatsPlaying = false;
+
+    // SoundFont removed — pure Web Audio synthesis
+    this._sfBus = null;
+    this.soundfont = null;
+    this._sfReady = false;
+    this.params = {
+      baseFreq: 220,
+      scale: [0, 2, 4, 7, 9],
+      chords: [[0, 4, 7], [5, 9, 0], [7, 11, 2], [0, 4, 7]],
+      density: 3,
+      filterFreq: 800,
+      filterQ: 1,
+      reverbMix: 0.35,
+      attack: 5,
+      release: 6,
+      detune: 15
+    };
+    this.chordIndex = 0;
+
+    // ═══ MACRO DYNAMICS ═══
+    // Creates large-scale dynamic arcs (2-4 minute cycles)
+    // that modulate the overall intensity of the entire mix.
+    // This makes the music "breathe" at a structural level -
+    // genuine quiet moments, builds to peaks, then rest.
+    this._macro = {
+      phase: 0,           // 0-1 position in current macro arc
+      intensity: 0.5,     // current intensity multiplier (0-1)
+      arcDuration: 150,   // seconds for one full arc cycle
+      shape: 'breathe',   // breathe, swell, plateau, sparse
+      timer: null,
+      tickInterval: null,
+      // How aggressively macro affects the mix (0 = off, 1 = full)
+      depth: 0.6
+    };
+  }
+
+  // All musical intelligence lives in MusicBrain - no static presets here
+
+  /* ═══ GAIN RAMP HELPER - prevents overlapping ramps on gain nodes ═══ */
+  _rampGain(gainNode, target, timeConstant) {
+    const now = this.ctx.currentTime;
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+    gainNode.gain.setTargetAtTime(target, now, timeConstant);
+  }
+
+  /* ═══ APPLY CONTEXT (via Music Brain) ═══ */
+  applyContext(ctx) {
+    const musical = this.brain.interpret({
+      timeOfDay: ctx.timeOfDay,
+      weather: ctx.weather,
+      season: ctx.season,
+      movement: ctx.movement,
+      holiday: ctx.holiday,
+      temp: ctx.temp
+    });
+    console.log('[Kálma Brain] Context → Music:', musical);
+    // During emergence: absorb params AND still react to movement/filter
+    // (so tilting the phone during the first seconds creates audible response)
+    if (this._emerging) {
+      Object.assign(this.params, musical);
+      this.core.setReverbAmount(this.params.reverbMix);
+      if (musical.vaPreset) this.vaSynth.loadPreset(musical.vaPreset);
+      if (musical.fmPreset) this.fmSynth.loadPreset(musical.fmPreset);
+      if (musical.wtPreset) this.wavetable.loadPreset(musical.wtPreset);
+      // Still apply filter/reverb changes to existing drones during emergence
+      // This makes the sound REACT even before full system is up
+      const now = this.ctx.currentTime;
+      this.voices.forEach(v => {
+        if (v.alive && v.filter) {
+          v.filter.frequency.setTargetAtTime(
+            Math.max(300, Math.min(1400, this.params.filterFreq * 0.7)),
+            now, 3
+          );
+        }
+      });
+      return;
+    }
+
+    this._crossfadeTo(musical);
+
+    // Movement → structural music changes (the CORE adaptive behavior)
+    // This must be the most noticeable response — users must FEEL this
+    this._applyMovementState(ctx.movement);
+
+    // Weather → texture and atmosphere (noticeable character shift)
+    this._applyWeatherState(ctx.weather, ctx.temp);
+
+    // Time of day → harmonic brightness and density
+    this._applyTimeState(ctx.timeOfDay);
+
+    // Movement → beats control (immediate for walking/active)
+    this._handleMovementBeats(ctx.movement);
+
+    // Update phrase engine BPM based on context and sync to beats + melody
+    if (this.phrase.running) {
+      const suggestedBpm = this.phrase.suggestBpmForContext(ctx);
+      this.phrase.setBpm(suggestedBpm);
+      if (!this._manualBeatMode) this.beats.setBpm(suggestedBpm);
+      this.melody.setBpm(suggestedBpm);
+    }
+  }
+
+
+  /* ═══ PHRASE EVENT HANDLER - The musical conductor speaks ═══ */
+  _onPhraseEvent(evt) {
+    if (!this.running || this._emerging) return;
+    const now = this.ctx.currentTime;
+
+    if (evt.type === 'beat') {
+      // ── Drone breathing: gentle volume swell synced to phrase tension
+      this._applyBreathing(evt);
+
+
+      // ── Chord changes on musical boundaries (not random timers)
+      if (evt.suggestChordChange && this.params.chords) {
+        this._advanceChordMusically();
+      }
+
+      // ── Filter and reverb respond to tension
+      this._applyTensionToSound(evt);
+
+      // ── Pass phrase state to melody engine
+      if (this.melody) {
+        this.melody.setPhraseState(
+          evt.tension, evt.density, evt.isDownbeat,
+          evt.isPhraseStart, evt.recallTheme, evt.themeToRecall
+        );
+      }
+
+      // Adaptive beats are movement-driven (walking/active triggers them)
+      // No tension-based auto-triggering - keeps the music peaceful
+
+      // ── Suggest silence (rests make the music breathe)
+      if (evt.suggestBreath) {
+        this._musicalBreath(evt);
+      }
+
+    } else if (evt.type === 'phraseEnd') {
+      // Store current melody motif in phrase memory for later recall
+      if (this.melody && this.melody.currentMotif && evt.tension > 0.5) {
+        this.phrase.rememberTheme(this.melody.currentMotif);
+      }
+
+
+      // At phrase boundaries: potential for melodic recall
+      if (evt.nextTension > evt.tension + 0.15) {
+        // Tension is rising - bring in more instruments
+        this._buildTexture();
+      } else if (evt.nextTension < evt.tension - 0.2) {
+        // Tension is falling - thin out
+        this._thinTexture();
+      }
+
+    } else if (evt.type === 'arcEnd') {
+      // End of a full tension arc: momentary stillness
+      this._arcBreath();
+    }
+  }
+
+  /* ── Drone breathing: drones swell and dip with phrase tension ── */
+  _applyBreathing(evt) {
+    if (!this.padGain) return;
+    // During mood shift recovery, don't modulate
+    if (this._moodShiftRecovery) return;
+
+    // CRITICAL: In still/neutral state, do NOT override the silence.
+    // Breathing only applies when instruments are actually playing.
+    const ms = this._movementState;
+    if (ms === 'still' || ms === 'neutral') return;
+
+    // Base pad level + tension-driven swell
+    const basePad = this._droneDucked ? 0.06 : 0.35;
+    const tensionBoost = evt.tension * 0.15;
+
+    // Micro-pulse: gentle pumping on downbeats (sidechain-like feel)
+    const pulse = evt.isDownbeat ? 0.93 : 1.0;
+
+    const target = (basePad + tensionBoost) * pulse;
+    this._rampGain(this.padGain, target, 0.3);
+
+    // Instrument buses breathe (only in walking/active)
+    const instLevel = this._droneDucked ? 0.04 : (0.30 + evt.tension * 0.25);
+    this._rampGain(this._vaBus, instLevel * pulse, 0.5);
+    this._rampGain(this._fmBus, instLevel * 0.7 * pulse, 0.5);
+    this._rampGain(this._wtBus, instLevel * 0.85 * pulse, 0.5);
+  }
+
+  /* ── Tension → sound parameters (filter opens as tension rises) ── */
+  _applyTensionToSound(evt) {
+    // In still/neutral: don't override the dark, quiet filter state
+    const ms = this._movementState;
+    if (ms === 'still' || ms === 'neutral') return;
+
+    const now = this.ctx.currentTime;
+    const tension = evt.tension;
+
+    // Filter frequency follows tension (brighter at peak)
+    const baseFilter = this.params.filterFreq || 800;
+    const filterRange = 500; // wider range for more noticeable changes
+    const tensionFilter = baseFilter + (tension - 0.5) * filterRange;
+
+    // Apply to active voices (clean ramp on filter frequency)
+    this.voices.forEach(v => {
+      if (v.alive && v.filter) {
+        const freq = v.filter.frequency;
+        freq.cancelScheduledValues(now);
+        freq.setValueAtTime(freq.value, now);
+        freq.setTargetAtTime(
+          Math.max(250, Math.min(2200, tensionFilter)),
+          now, 1.5
+        );
+      }
+    });
+
+    // Reverb follows inverse tension (more space when quiet)
+    const reverbBase = this.params.reverbMix || 0.35;
+    const reverbTarget = reverbBase + (1 - tension) * 0.1;
+    this.core.setReverbAmount(Math.min(0.6, reverbTarget));
+  }
+
+  /* ── Musical breath: brief thinning at phrase boundaries ── */
+  _musicalBreath(evt) {
+    // During mood shift recovery, skip breaths
+    if (this._moodShiftRecovery) return;
+    // Briefly dip drone volume for a "breath"
+    if (this.padGain) {
+      const current = this.padGain.gain.value;
+      this._rampGain(this.padGain, current * 0.6, 0.5);
+      // Restore after 2-3 beats
+      const restoreMs = (60000 / this.phrase.bpm) * 2.5;
+      setTimeout(() => {
+        if (this.running && this.padGain) {
+          this._rampGain(this.padGain, current, 1.5);
+        }
+      }, restoreMs);
+    }
+
+    // Remember this silence if it happened during low tension
+    if (evt.tension < 0.2) {
+      this.phrase.rememberSilence();
+    }
+  }
+
+  /* ── Build texture: add instruments gradually ── */
+  _buildTexture() {
+    // Gradually bring synth buses up
+    if (!this._droneDucked) {
+      this._rampGain(this._vaBus, 0.35, 4);
+      this._rampGain(this._fmBus, 0.25, 5);
+      this._rampGain(this._wtBus, 0.3, 4.5);
+    }
+    console.log('[K\u00e1lma Phrase] Building texture...');
+  }
+
+  /* ── Thin texture: pull instruments back ── */
+  _thinTexture() {
+    if (!this._droneDucked) {
+      this._rampGain(this._vaBus, 0.20, 3);
+      this._rampGain(this._fmBus, 0.14, 3.5);
+      this._rampGain(this._wtBus, 0.18, 3);
+    }
+    console.log('[K\u00e1lma Phrase] Thinning texture...');
+  }
+
+  /* ── Arc breath: stillness between tension arcs ── */
+  _arcBreath() {
+    // Brief dip between tension arcs (not silence)
+    if (this.padGain) {
+      const orig = this.padGain.gain.value;
+      this._rampGain(this.padGain, orig * 0.55, 1);
+      setTimeout(() => {
+        if (this.running && this.padGain) {
+          this._rampGain(this.padGain, orig, 2);
+        }
+      }, 2000 + Math.random() * 1500);
+    }
+    console.log('[K\u00e1lma Phrase] Arc breath - moment of stillness');
+  }
+
+  /* -- Phrase-aware chord advance (replaces random timer) -- */
+  _advanceChordMusically() {
+    if (!this.params.chords || this.params.chords.length === 0) return;
+    const now = this.ctx.currentTime;
+
+    // Pick next chord: usually sequential, but occasionally skip for variety
+    const prevIndex = this.chordIndex;
+    if (Math.random() < 0.15 && this.params.chords.length > 3) {
+      // Skip one chord for a surprise modulation feel
+      this.chordIndex = (this.chordIndex + 2) % this.params.chords.length;
+    } else {
+      this.chordIndex = (this.chordIndex + 1) % this.params.chords.length;
+    }
+
+    // Remember good chord voicings at high tension moments
+    if (this.phrase.tension > 0.7) {
+      this.phrase.rememberChord(this.params.chords[this.chordIndex]);
+    }
+
+    // Trigger instrument note changes with voice-led smooth transitions
+    this._scheduleInstruments();
+
+    // Fade old pads, spawn new ones for the new chord
+    this._transitionPadChord(this.params.chords[this.chordIndex]);
+  }
+
+  /* ═══ MACRO DYNAMICS ═══
+     Large-scale dynamic arcs that modulate the entire mix over 2-4 minutes.
+     Creates genuine quiet moments, gradual builds to peaks, and rest periods.
+     This is what makes the difference between "endless same-level drone" and
+     "music that breathes and tells a story." */
+
+  _startMacroDynamics() {
+    this._macro.phase = 0;
+    this._macro.intensity = 0.5;
+    this._macro.arcDuration = 120 + Math.random() * 90; // 2-3.5 min
+    this._macro.shape = this._pickMacroShape();
+    // Tick every 2 seconds - smooth enough, not wasteful
+    this._macro.tickInterval = setInterval(() => this._macroTick(), 2000);
+    console.log('[Kálma Macro] Started arc:', this._macro.shape, 'duration:', Math.round(this._macro.arcDuration) + 's');
+  }
+
+  _stopMacroDynamics() {
+    if (this._macro.tickInterval) {
+      clearInterval(this._macro.tickInterval);
+      this._macro.tickInterval = null;
+    }
+  }
+
+  _pickMacroShape() {
+    const shapes = ['breathe', 'swell', 'plateau', 'sparse', 'wave'];
+    // Weighted: breathe and swell are more common (ambient-friendly)
+    const weights = [3, 3, 2, 2, 1];
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * totalWeight;
+    for (let i = 0; i < shapes.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return shapes[i];
+    }
+    return 'breathe';
+  }
+
+  _macroTick() {
+    if (!this.running) return;
+
+    // Advance phase (0 to 1 over arcDuration)
+    this._macro.phase += 2 / this._macro.arcDuration; // 2s per tick
+    if (this._macro.phase >= 1) {
+      // Arc complete - pick a new shape and duration
+      this._macro.phase = 0;
+      this._macro.arcDuration = 120 + Math.random() * 90;
+      this._macro.shape = this._pickMacroShape();
+      console.log('[Kálma Macro] New arc:', this._macro.shape, 'duration:', Math.round(this._macro.arcDuration) + 's');
+    }
+
+    // Calculate target intensity from shape
+    const target = this._macroIntensityForPhase(this._macro.phase, this._macro.shape);
+
+    // Smooth interpolation toward target
+    this._macro.intensity += (target - this._macro.intensity) * 0.15;
+
+    // Apply macro intensity to the mix
+    this._applyMacroIntensity(this._macro.intensity);
+  }
+
+  _macroIntensityForPhase(phase, shape) {
+    switch (shape) {
+      case 'breathe':
+        // Gentle sine wave: 0.3 to 0.85
+        return 0.3 + Math.sin(phase * Math.PI) * 0.55;
+
+      case 'swell':
+        // Slow build to peak at 75%, then quick fade
+        if (phase < 0.75) return 0.2 + (phase / 0.75) * 0.7;
+        return 0.9 - ((phase - 0.75) / 0.25) * 0.6;
+
+      case 'plateau':
+        // Quick rise, sustain at high level, gentle descent
+        if (phase < 0.15) return 0.3 + (phase / 0.15) * 0.55;
+        if (phase < 0.7) return 0.85 + Math.sin((phase - 0.15) * 5) * 0.05;
+        return 0.85 - ((phase - 0.7) / 0.3) * 0.5;
+
+      case 'sparse':
+        // Mostly quiet with one peak moment
+        if (phase < 0.4) return 0.15 + phase * 0.2;
+        if (phase < 0.55) return 0.25 + ((phase - 0.4) / 0.15) * 0.65;
+        if (phase < 0.65) return 0.9 - ((phase - 0.55) / 0.1) * 0.4;
+        return 0.5 - ((phase - 0.65) / 0.35) * 0.35;
+
+      case 'wave':
+        // Two peaks (double hump)
+        return 0.3 + Math.sin(phase * Math.PI * 2) * 0.25 + Math.sin(phase * Math.PI) * 0.25;
+
+      default:
+        return 0.5;
+    }
+  }
+
+  _applyMacroIntensity(intensity) {
+    const depth = this._macro.depth;
+    const now = this.ctx.currentTime;
+
+    // During mood shift recovery, don't modulate — let gains stabilize
+    if (this._moodShiftRecovery) return;
+    // In piano/melody mode, don't modulate — piano owns the volume
+    if (this._droneDucked) return;
+
+    // Scale from depth: at depth=0.6, intensity 0 means 60% of normal, intensity 1 means 100%
+    // IMPORTANT: never let musicBus drop below 0.6 to avoid inaudible troughs
+    const multiplier = Math.max(0.6, 1 - depth + (depth * intensity));
+
+    // Modulate master music bus gain (the overall envelope)
+    if (this.core.musicBus) {
+      const musicTarget = multiplier * 1.0; // musicBus base is 1.0
+      this.core.musicBus.gain.cancelScheduledValues(now);
+      this.core.musicBus.gain.setValueAtTime(this.core.musicBus.gain.value, now);
+      this.core.musicBus.gain.setTargetAtTime(musicTarget, now, 3);
+    }
+
+    // During very quiet macro moments, tell the melody to play sparser
+    if (this.melody && this.melody._masterGain) {
+      const melTarget = 0.2 + intensity * 0.5; // 0.2 to 0.7
+      this.melody._masterGain.gain.cancelScheduledValues(now);
+      this.melody._masterGain.gain.setValueAtTime(this.melody._masterGain.gain.value, now);
+      this.melody._masterGain.gain.setTargetAtTime(melTarget, now, 4);
+    }
+
+    // Reverb mix increases during quiet moments (more space when sparse)
+    const reverbBoost = (1 - intensity) * 0.12;
+    this.core.setReverbAmount((this.params.reverbMix || 0.35) + reverbBoost);
+
+    // During quiet macro moments, gently reduce but never silence
+    if (intensity < 0.25 && !this._droneDucked) {
+      this._rampGain(this._vaBus, 0.15, 4);
+      this._rampGain(this._fmBus, 0.10, 4);
+      this._rampGain(this._wtBus, 0.12, 4);
+    }
+  }
+
+  /* Get current macro intensity for external use (visualizer, UI) */
+  getMacroIntensity() {
+    return this._macro.intensity;
+  }
+
+  /* ═══ BEATS USER TOGGLE (Adaptive Mode) ═══
+     When ON: beats play in adaptive bursts driven by phrase engine tension.
+     They fade in during high-tension phrases, rest during low-tension.
+     When OFF: beats never play. */
+  setBeatsEnabled(on) {
+    this._beatsEnabled = on;
+    this._manualBeatMode = false; // any toggle clears manual mode
+    // Clear walking timers since user is taking manual control
+    this._clearWalkingTimers();
+    if (on) {
+      // Start adaptive beats - will be modulated by phrase tension
+      this._startAdaptiveBeats();
+      console.log('[Kalma] Beats Adaptive Mode ON at', this.phrase.bpm, 'BPM');
+    } else {
+      // User turned off → fade out beats
+      if (this._beatsActive) {
+        this._autoStopBeats(3);
+        console.log('[Kalma] Beats OFF (user toggle)');
+      }
+      this._adaptiveBeatsRunning = false;
+    }
+  }
+
+  /* Start beats immediately (for manual Beat Type selection from Layers drawer).
+     Bypasses grace period and tension threshold - user explicitly wants rhythm now.
+     Sets _manualBeatMode so adaptive logic won't interfere. */
+  startBeatsNow(vol) {
+    this._beatsEnabled = true;
+    this._manualBeatMode = true; // lock: don't let adaptive/movement fade these out
+    this._adaptiveBeatsRunning = false;
+    this._clearWalkingTimers();
+    this._autoStartBeats(vol || 0.6, 4);
+    console.log('[Kálma] Manual beat type started immediately');
+  }
+
+  /* Stop manual beat mode (when user deselects beat type) */
+  stopManualBeats() {
+    this._manualBeatMode = false;
+    this._autoStopBeats(3);
+  }
+
+  /* Adaptive beats: phrase-driven bursts. Beats play during higher-tension
+     phrases and rest during lower ones. Creates musical breathing. */
+  _startAdaptiveBeats() {
+    this._adaptiveBeatsRunning = true;
+    // Grace period: don't allow beats for the first 60 seconds of playback
+    // Let the music establish itself before any rhythm enters
+    this._adaptiveBeatsGrace = Date.now() + 60000;
+    console.log('[K\u00e1lma] Adaptive beats armed \u2014 grace period 60s');
+  }
+
+  /* Called at each phrase boundary: decide whether beats should play or rest.
+     Beats fade in when tension exceeds threshold, fade out when it drops.
+     Requires grace period to have elapsed (music establishes itself first). */
+  _adaptiveBeatsPhraseCheck(tension) {
+    // Manual beat mode - don't interfere
+    if (this._manualBeatMode) return;
+    // Respect grace period - no beats in the first minute
+    if (this._adaptiveBeatsGrace && Date.now() < this._adaptiveBeatsGrace) return;
+
+    // Beat decision (original tension-based logic)
+    const shouldPlay = tension > 0.6;
+    if (shouldPlay && !this._beatsActive) {
+      // Tension rising - bring in beats with musical fade
+      const vol = 0.3 + tension * 0.3;
+      this._autoStartBeats(vol, 8); // slower fade-in
+      console.log('[K\u00e1lma] Adaptive beats IN (tension:', tension.toFixed(2) + ')');
+    } else if (!shouldPlay && this._beatsActive) {
+      // Tension dropping - rest the beats
+      this._autoStopBeats(6);
+      console.log('[K\u00e1lma] Adaptive beats OUT (tension:', tension.toFixed(2) + ')');
+    } else if (shouldPlay && this._beatsActive) {
+      // Adjust volume to match tension
+      const vol = 0.3 + tension * 0.3;
+      this._rampGain(this._beatsBus, vol, 2);
+    }
+  }
+
+  /* ═══ MOVEMENT STATE — Structural adaptive response ═══
+     This is the CORE adaptive behavior that users MUST feel.
+     Movement changes reshape the entire musical landscape —
+     not just parameters but what is playing, its character, and how alive it feels.
+
+     STILL: Soft mid-low drone. Dreamy, shimmering, star-like glow.
+            Airy, calm, present but minimal. Like a warm light in darkness.
+     NEUTRAL: Subtle motion detected (tilts, sway). Harmonic shimmer,
+              gentle modulation, texture movement. The music notices you.
+     WALKING: Immediate musical evolution. Layers build, melody appears,
+              rhythm syncs to pace. Alive, connected, immersive.
+     ACTIVE: Energized, synchronized, fully developed. Stronger layers,
+             richer harmonics, driving rhythm. Still calm at its core. */
+  _applyMovementState(movement) {
+    if (movement === this._movementState) return;
+    const prev = this._movementState || 'still';
+    this._movementState = movement;
+    const now = this.ctx.currentTime;
+
+    // Skip during drone duck (piano mode) or emergence
+    if (this._droneDucked || this._emerging) return;
+
+    console.log('[K\u00e1lma Adaptive] Movement:', prev, '\u2192', movement);
+
+    if (movement === 'still') {
+      // ═══ TRUE STILLNESS ═══
+      // Almost everything STOPS. Only a single barely-there floating drone.
+      // Like a distant star you can barely perceive. Near-silence.
+      // When you move again, the music will genuinely START — not just get louder.
+
+      // KILL all instruments (not just quiet — actually silent)
+      this._rampGain(this._vaBus, 0, 3);
+      this._rampGain(this._fmBus, 0, 3);
+      this._rampGain(this._wtBus, 0, 3);
+      // Pads fade to barely perceptible
+      if (this.padGain) this._rampGain(this.padGain, 0.04, 4);
+      // Melody: STOP (not quiet — actually stop generating notes)
+      if (this.melody) {
+        this.melody.stop();
+      }
+      this._rampGain(this._melodyBus, 0, 3);
+      // Slow down phrase engine to near-frozen
+      if (this.phrase.running) {
+        const slowBpm = 25 + Math.random() * 5;
+        this.phrase.glideBpm(slowBpm, 6000);
+      }
+      // Deep reverb — the single drone floats in vast space
+      this.core.setReverbAmount(Math.min(0.6, (this.params.reverbMix || 0.35) + 0.2));
+      // STOP drone evolution — no new voices spawn
+      if (this.evolveTimer) { clearTimeout(this.evolveTimer); this.evolveTimer = null; }
+      // Fade out all but 1 drone voice (keep only the softest one floating)
+      this._fadeToSingleDrone();
+      // Low macro depth (barely any movement)
+      this._macro.depth = 0.1;
+
+    } else if (movement === 'neutral') {
+      // ═══ THE MUSIC STIRS ═══
+      // User shifted slightly — the floating drone reacts.
+      // Filter opens, shimmer increases, a hint of harmonic color appears.
+      // NOT full instruments yet — just the drone waking up.
+
+      // Instruments stay silent (only drone responds to subtle motion)
+      this._rampGain(this._vaBus, 0, 2);
+      this._rampGain(this._fmBus, 0, 2);
+      this._rampGain(this._wtBus, 0, 2);
+      // Drone gets slightly louder and brighter
+      if (this.padGain) this._rampGain(this.padGain, 0.08, 2);
+      // Melody stays off
+      this._rampGain(this._melodyBus, 0, 2);
+      // BPM stirs slightly
+      if (this.phrase.running) {
+        const neutralBpm = 35 + Math.random() * 8;
+        this.phrase.glideBpm(neutralBpm, 3000);
+      }
+      // Open filter on existing drones (the key audible change)
+      this.voices.forEach(v => {
+        if (v.alive && v.filter) {
+          v.filter.frequency.setTargetAtTime(
+            Math.min(900, v.filter.frequency.value + 300), now, 2
+          );
+        }
+        // Make the drone slightly louder (waking up)
+        if (v.alive && v.gain) {
+          v.gain.gain.setTargetAtTime(0.06, now, 2);
+        }
+      });
+      // Reverb stays deep
+      this.core.setReverbAmount(Math.min(0.55, (this.params.reverbMix || 0.35) + 0.12));
+      // No new drones spawn — just the existing one responds
+      this._macro.depth = 0.15;
+
+    } else if (movement === 'walking') {
+      // ═══ THE MUSIC AWAKENS ═══
+      // This is the "orchestra starts playing" moment.
+      // From near-silence, instruments genuinely START.
+      // Melody begins. Harmonics bloom. The music is ALIVE.
+      const td = this._timeDensityMod || 1.0;
+
+      // RESTART instruments (they were silent during stillness)
+      this._rampGain(this._vaBus, 0.45 * td, 1.2);
+      this._rampGain(this._fmBus, 0.3 * td, 1.5);
+      this._rampGain(this._wtBus, 0.4 * td, 1.2);
+      // Pads bloom from near-nothing
+      if (this.padGain) this._rampGain(this.padGain, 0.38 * td, 1.2);
+      // RESTART melody (it was stopped during stillness)
+      this._rampGain(this._melodyBus, 0.5 * td, 1);
+      if (this.melody && !this.melody.running) {
+        this.melody.setContext(this.params.scale, this.params.baseFreq, this.params.chords, this.params);
+        this.melody.start();
+      }
+      if (this.melody && this.melody._masterGain) {
+        this.melody._masterGain.gain.setTargetAtTime(0.55 * td, now, 1);
+      }
+      // Walking pace BPM (immediate — 2 seconds)
+      if (this.phrase.running) {
+        const walkBpm = 64 + Math.random() * 14;
+        this.phrase.glideBpm(walkBpm, 2000);
+        this.melody.setBpm(walkBpm);
+      }
+      // Open filters WIDE for brightness (contrast from dark stillness)
+      this.voices.forEach(v => {
+        if (v.alive && v.filter) {
+          v.filter.frequency.setTargetAtTime(
+            Math.min(1500, (this.params.filterFreq || 800) + 300), now, 1.5
+          );
+        }
+      });
+      // Moderate reverb (pulled in from deep space)
+      this.core.setReverbAmount(this.params.reverbMix || 0.35);
+      // RESTART drone evolution (spawns new voices)
+      if (!this.evolveTimer) this._evolve();
+      // Restart chord pads if they died during stillness
+      if (this.params.chords) this._spawnInitialPads();
+      // Restart instrument scheduling
+      this._scheduleInstruments();
+      // Active macro dynamics
+      this._macro.depth = 0.6;
+
+    } else if (movement === 'active') {
+      // ═══ FULL ORCHESTRAL ENERGY ═══
+      // Everything at maximum. Instant. Like an orchestra hitting a dramatic cue.
+      // Dense, bright, synchronized, driving. The music runs with you.
+      const td = this._timeDensityMod || 1.0;
+
+      // EVERYTHING at full presence (0.5s ramps — near-instant)
+      this._rampGain(this._vaBus, 0.65 * td, 0.5);
+      this._rampGain(this._fmBus, 0.5 * td, 0.6);
+      this._rampGain(this._wtBus, 0.6 * td, 0.5);
+      // Pads full and rich
+      if (this.padGain) this._rampGain(this.padGain, 0.55 * td, 0.5);
+      // Melody at maximum presence
+      this._rampGain(this._melodyBus, 0.7 * td, 0.5);
+      if (this.melody && !this.melody.running) {
+        this.melody.setContext(this.params.scale, this.params.baseFreq, this.params.chords, this.params);
+        this.melody.start();
+      }
+      if (this.melody && this.melody._masterGain) {
+        this.melody._masterGain.gain.setTargetAtTime(0.75 * td, now, 0.5);
+      }
+      // Fast BPM (glide in 1.5 seconds)
+      if (this.phrase.running) {
+        const activeBpm = 85 + Math.random() * 25;
+        this.phrase.glideBpm(activeBpm, 1500);
+        if (this.melody) this.melody.setBpm(activeBpm);
+        if (!this._manualBeatMode) this.beats.setBpm(activeBpm);
+      }
+      // Maximum filter brightness
+      this.voices.forEach(v => {
+        if (v.alive && v.filter) {
+          v.filter.frequency.setTargetAtTime(
+            Math.min(2000, (this.params.filterFreq || 800) + 500), now, 1
+          );
+        }
+      });
+      // Tight reverb (punchy, present)
+      this.core.setReverbAmount(Math.max(0.1, (this.params.reverbMix || 0.35) - 0.2));
+      // Full drone evolution
+      if (!this.evolveTimer) this._evolve();
+      // Restart pads and instruments if coming from still
+      if (prev === 'still' || prev === 'neutral') {
+        if (this.params.chords) this._spawnInitialPads();
+        this._scheduleInstruments();
+      }
+      // Maximum macro dynamics
+      this._macro.depth = 0.8;
+    }
+  }
+
+  /* Fade all drones except one — true stillness means near-silence */
+  _fadeToSingleDrone() {
+    const now = this.ctx.currentTime;
+    this.voices = this.voices.filter(v => v.alive);
+    if (this.voices.length <= 1) {
+      // Already sparse enough — just make the remaining one very quiet
+      this.voices.forEach(v => {
+        if (v.alive && v.gain) {
+          v.gain.gain.cancelScheduledValues(now);
+          v.gain.gain.setValueAtTime(v.gain.gain.value, now);
+          v.gain.gain.setTargetAtTime(0.03, now, 4); // barely perceptible
+        }
+      });
+      return;
+    }
+    // Keep only 1 voice, fade the rest to silence and kill them
+    const keeper = this.voices[0]; // keep the first (usually root)
+    for (let i = 1; i < this.voices.length; i++) {
+      const v = this.voices[i];
+      if (v.alive) {
+        this._fadeOutVoice(v, now);
+      }
+    }
+    // Make the keeper very quiet (floating, barely-there)
+    if (keeper && keeper.alive && keeper.gain) {
+      keeper.gain.gain.cancelScheduledValues(now);
+      keeper.gain.gain.setValueAtTime(keeper.gain.gain.value, now);
+      keeper.gain.gain.setTargetAtTime(0.03, now, 4);
+      // Close its filter for a darker, more distant character
+      if (keeper.filter) {
+        keeper.filter.frequency.setTargetAtTime(400, now, 5);
+      }
+    }
+  }
+
+  /* ═══ WEATHER STATE — Atmospheric texture response ═══
+     Weather doesn't just shift parameters — it changes the character of sound.
+     Rain = wetter, more diffuse, slightly melancholic
+     Storm = tense, driving, darker harmonics
+     Fog = extremely spacious, barely-there, ethereal
+     Clear = present, defined, open
+     Snow = crystalline, sparse, delicate */
+  _applyWeatherState(weather, temp) {
+    if (weather === this._weatherState) return;
+    this._weatherState = weather;
+    const now = this.ctx.currentTime;
+    if (this._droneDucked || this._emerging) return;
+
+    console.log('[K\u00e1lma Adaptive] Weather:', weather);
+
+    switch (weather) {
+      case 'rain':
+        // Wet, diffuse, contemplative — user should hear the "wetness"
+        this.core.setReverbAmount(Math.min(0.6, (this.params.reverbMix || 0.35) + 0.18));
+        // Close filters on all voices for a muffled, rainy feel
+        this.voices.forEach(v => {
+          if (v.alive && v.filter) {
+            v.filter.frequency.setTargetAtTime(
+              Math.max(350, v.filter.frequency.value - 200), now, 5
+            );
+          }
+        });
+        if (this.phrase.running) {
+          const rainBpm = Math.max(38, this.phrase.bpm - 12);
+          this.phrase.setBpm(rainBpm);
+          this.melody.setBpm(rainBpm);
+        }
+        break;
+
+      case 'storm':
+        // Tense, darker, driving — noticeable energy shift
+        this._macro.depth = Math.min(0.9, this._macro.depth + 0.2);
+        // Stronger instrument presence during storms
+        this._rampGain(this._vaBus, Math.min(0.6, this._vaBus.gain.value + 0.15), 3);
+        this._rampGain(this._fmBus, Math.min(0.4, this._fmBus.gain.value + 0.1), 3);
+        if (this.phrase.running) {
+          const stormBpm = Math.min(100, this.phrase.bpm + 15);
+          this.phrase.setBpm(stormBpm);
+          this.melody.setBpm(stormBpm);
+        }
+        break;
+
+      case 'fog':
+        // Extremely spacious, barely-there, ethereal — dramatic thinning
+        this.core.setReverbAmount(0.6);
+        if (this.phrase.running) {
+          const fogBpm = Math.max(30, this.phrase.bpm - 18);
+          this.phrase.setBpm(fogBpm);
+          this.melody.setBpm(fogBpm);
+        }
+        // Thin out noticeably — user should feel the emptiness
+        this._rampGain(this._fmBus, this._fmBus.gain.value * 0.35, 4);
+        this._rampGain(this._wtBus, this._wtBus.gain.value * 0.5, 4);
+        if (this.melody && this.melody._masterGain) {
+          this.melody._masterGain.gain.setTargetAtTime(
+            this.melody._masterGain.gain.value * 0.4, now, 5
+          );
+        }
+        break;
+
+      case 'snow':
+        // Crystalline, delicate, sparse — sparkle quality
+        this.core.setReverbAmount(Math.min(0.55, (this.params.reverbMix || 0.35) + 0.12));
+        // Open filter for crystalline brightness
+        this.voices.forEach(v => {
+          if (v.alive && v.filter) {
+            v.filter.frequency.setTargetAtTime(
+              Math.min(1300, v.filter.frequency.value + 200), now, 6
+            );
+          }
+        });
+        if (this.phrase.running) {
+          const snowBpm = Math.max(35, this.phrase.bpm - 14);
+          this.phrase.setBpm(snowBpm);
+          this.melody.setBpm(snowBpm);
+        }
+        break;
+
+      case 'clear':
+        // Open, present, defined — clearest sound
+        this.core.setReverbAmount(this.params.reverbMix || 0.35);
+        // Slightly brighter filter
+        this.voices.forEach(v => {
+          if (v.alive && v.filter) {
+            v.filter.frequency.setTargetAtTime(
+              Math.min(1200, v.filter.frequency.value + 100), now, 6
+            );
+          }
+        });
+        break;
+    }
+
+    // Temperature influence on timbre warmth
+    if (temp !== undefined && temp !== this._lastTemp) {
+      this._lastTemp = temp;
+      // Cold = darker filter, more detune (shimmery). Hot = brighter, tighter
+      if (temp < 10) {
+        // Cold — close filter on active voices for warmth
+        this.voices.forEach(v => {
+          if (v.alive && v.filter) {
+            v.filter.frequency.setTargetAtTime(
+              Math.max(300, v.filter.frequency.value - 150), now, 8
+            );
+          }
+        });
+      } else if (temp > 30) {
+        // Hot — open filter slightly
+        this.voices.forEach(v => {
+          if (v.alive && v.filter) {
+            v.filter.frequency.setTargetAtTime(
+              Math.min(1200, v.filter.frequency.value + 100), now, 8
+            );
+          }
+        });
+      }
+    }
+  }
+
+  /* ═══ TIME OF DAY STATE — Gradual harmonic shifting ═══
+     The music should feel like shifting light:
+     Morning = bright, open, energetic
+     Afternoon = neutral, steady
+     Evening = warmer, settling
+     Night = minimal, deep, spacious
+     Late night = almost nothing, just presence */
+  _applyTimeState(timeOfDay) {
+    if (timeOfDay === this._timeState) return;
+    this._timeState = timeOfDay;
+    if (this._droneDucked || this._emerging) return;
+
+    console.log('[K\u00e1lma Adaptive] Time:', timeOfDay);
+
+    // Adjust the overall energy ceiling based on time
+    // This affects how "full" the music can get even during movement
+    switch (timeOfDay) {
+      case 'morning':
+      case 'lateMorning':
+        // Energetic ceiling — allow full response to movement
+        this._timeDensityMod = 1.0;
+        this._macro.depth = 0.6;
+        break;
+      case 'afternoon':
+        this._timeDensityMod = 0.9;
+        this._macro.depth = 0.55;
+        break;
+      case 'evening':
+        // Settling — reduce overall ceiling
+        this._timeDensityMod = 0.75;
+        this._macro.depth = 0.45;
+        // Slow down slightly
+        if (this.phrase.running) {
+          const eveBpm = Math.max(42, this.phrase.bpm - 5);
+          this.phrase.setBpm(eveBpm);
+          this.melody.setBpm(eveBpm);
+        }
+        break;
+      case 'night':
+        // Minimal — music pulls back significantly
+        this._timeDensityMod = 0.55;
+        this._macro.depth = 0.35;
+        this._rampGain(this._fmBus, this._fmBus.gain.value * 0.6, 8);
+        this._rampGain(this._wtBus, this._wtBus.gain.value * 0.7, 8);
+        break;
+      case 'lateNight':
+        // Almost nothing — deep drone only
+        this._timeDensityMod = 0.35;
+        this._macro.depth = 0.25;
+        this._rampGain(this._vaBus, this._vaBus.gain.value * 0.5, 10);
+        this._rampGain(this._fmBus, this._fmBus.gain.value * 0.3, 10);
+        this._rampGain(this._wtBus, this._wtBus.gain.value * 0.4, 10);
+        if (this.melody && this.melody._masterGain) {
+          this.melody._masterGain.gain.setTargetAtTime(0.1, this.ctx.currentTime, 8);
+        }
+        break;
+    }
+  }
+
+  _handleMovementBeats(movement) {
+    if (movement === this._lastMovement) return;
+    const prev = this._lastMovement;
+    this._lastMovement = movement;
+
+    // Manual beat mode - don't let movement interfere
+    if (this._manualBeatMode) return;
+
+    // Clear walking intermittent timers on any movement change
+    this._clearWalkingTimers();
+
+    if (!this._beatsEnabled) {
+      // Beats toggle is OFF - no beats regardless of movement
+      if (this._beatsActive) this._autoStopBeats(3);
+    } else {
+      // Adaptive mode ON - beats are triggered by MOVEMENT only
+      // Walking: immediate beats (no long delay)
+      // Active: sustained stronger beats
+      // Still/neutral: no beats
+      if (movement === 'active') {
+        if (!this._beatsActive) {
+          this._autoStartBeats(0.65, 3); // faster fade-in for immediacy
+        }
+        this._applyMovementToBeats(movement);
+      } else if (movement === 'walking') {
+        if (!this._beatsActive) {
+          this._startWalkingBeats();
+        } else {
+          this._applyMovementToBeats(movement);
+        }
+      } else {
+        // Still or neutral: fade beats out
+        if (this._beatsActive) {
+          this._autoStopBeats(4);
+        }
+      }
+    }
+  }
+
+  /* Auto-start beats (movement-triggered, smooth fade) */
+  _autoStartBeats(targetVol, fadeSec) {
+    if (this._beatsActive) {
+      // Already playing - just adjust volume
+      this._rampGain(this._beatsBus, targetVol, fadeSec / 3);
+      return;
+    }
+    this._beatsActive = true;
+    // Cancel any pending stop timeout
+    this._beatsStopId++;
+    // Force-stop the engine if it's still alive from a previous fade-out
+    if (this.beats.alive) {
+      this.beats.stop();
+      // Give it a tick to clean up before restarting
+    }
+    // Start fresh
+    this._rampGain(this._beatsBus, 0, 0.01); // ensure bus starts at 0
+    if (this.phrase.running && !this._manualBeatMode) this.beats.setBpm(this.phrase.bpm);
+    // Small delay to let any previous stop() cleanup finish
+    setTimeout(() => {
+      if (!this._beatsActive) return; // cancelled before we got here
+      this.beats.start();
+      this.melody.setBeatsActive(true);
+      this._rampGain(this._beatsBus, targetVol, fadeSec / 3);
+    }, 50);
+    // Gently duck pads so beats blend naturally
+    this._padBusTarget = this.padGain ? this.padGain.gain.value : 0.4;
+    if (this.padGain) this._rampGain(this.padGain, 0.15, fadeSec / 2);
+    console.log('[K\u00e1lma] Auto-beats ON, fade', fadeSec + 's, vol', targetVol);
+  }
+
+  /* Auto-stop beats (movement-triggered, smooth fade-out) */
+  _autoStopBeats(fadeSec) {
+    if (!this._beatsActive) return;
+    // Never auto-stop when in manual beat mode
+    if (this._manualBeatMode) return;
+    // Mark inactive immediately so _autoStartBeats knows to do a fresh start
+    this._beatsActive = false;
+    const now = this.ctx.currentTime;
+    this._rampGain(this._beatsBus, 0, fadeSec / 3);
+    this.melody.setBeatsActive(false);
+    // Restore pad volume
+    if (this.padGain) this._rampGain(this.padGain, this._padBusTarget || 0.4, 3);
+    // Actually stop the beats engine after the fade completes
+    const stopId = ++this._beatsStopId;
+    setTimeout(() => {
+      // Only stop if no new start happened since we scheduled this
+      if (this._beatsStopId === stopId && !this._beatsActive) {
+        this.beats.stop();
+        console.log('[K\u00e1lma] Beats engine stopped after fade');
+      }
+    }, (fadeSec + 2) * 1000);
+    console.log('[K\u00e1lma] Auto-beats OFF, fading', fadeSec + 's');
+  }
+
+  /* Walking: beats start quickly and play in bursts synced to walking */
+  _startWalkingBeats() {
+    const startBurst = () => {
+      if (this._lastMovement !== 'walking' || !this._beatsEnabled) return;
+      // Fade in beats for a burst — faster fade for immediacy
+      this._autoStartBeats(0.5, 3);
+      this._walkingBeatsPlaying = true;
+      console.log('[K\u00e1lma] Walking beat burst started');
+      // Burst duration: ~2:00 to ~2:45 (randomized)
+      const burstMs = (120 + Math.random() * 45) * 1000;
+      this._walkingBeatTimer = setTimeout(() => {
+        if (this._lastMovement !== 'walking') return;
+        // Fade out this burst
+        this._walkingBeatsPlaying = false;
+        this._autoStopBeats(3);
+        console.log('[K\u00e1lma] Walking beat burst ending');
+        // Shorter cooldown: 30-60s (user should feel rhythm returning)
+        const cooldownMs = (30 + Math.random() * 30) * 1000;
+        this._walkingBeatCooldown = setTimeout(() => {
+          if (this._lastMovement === 'walking' && this._beatsEnabled) {
+            startBurst();
+          }
+        }, cooldownMs);
+      }, burstMs);
+    };
+    // First burst starts quickly (3-6s) — user should feel immediate response
+    const initialDelay = (3 + Math.random() * 3) * 1000;
+    this._walkingBeatCooldown = setTimeout(startBurst, initialDelay);
+  }
+
+  _clearWalkingTimers() {
+    if (this._walkingBeatTimer) { clearTimeout(this._walkingBeatTimer); this._walkingBeatTimer = null; }
+    if (this._walkingBeatCooldown) { clearTimeout(this._walkingBeatCooldown); this._walkingBeatCooldown = null; }
+  }
+
+  // Movement volume adjustment (when user has beats manually enabled)
+  _applyMovementToBeats(movement) {
+    if (movement === 'active') {
+      this._beatsBus.gain.setTargetAtTime(0.7, this.ctx.currentTime, 1.5);
+    } else if (movement === 'walking') {
+      this._beatsBus.gain.setTargetAtTime(0.55, this.ctx.currentTime, 1.5);
+    } else {
+      // Still - softer but still audible
+      this._beatsBus.gain.setTargetAtTime(0.4, this.ctx.currentTime, 1.5);
+    }
+  }
+
+  _crossfadeTo(newParams) {
+    const now = this.ctx.currentTime;
+
+    // Let old voices decay naturally but faster (prevent volume dip during crossfade)
+    this.voices.forEach(v => {
+      if (v.alive) {
+        v.alive = false;
+        v.gain.gain.setTargetAtTime(0, now, 4);
+        setTimeout(() => {
+          v.oscs.forEach(o => { try { o.stop(); o.disconnect(); } catch(e){} });
+          try { v.lfo.stop(); v.lfo.disconnect(); } catch(e){}
+          try { v.lfoGain.disconnect(); } catch(e){}
+          try { v.filter.disconnect(); } catch(e){}
+          try { v.gain.disconnect(); } catch(e){}
+          try { if (v.panner) v.panner.disconnect(); } catch(e){}
+        }, 22000);
+      }
+    });
+    this.voices = [];
+
+    // Release instrument notes before transition
+    this._stopInstruments();
+
+    // FIX: Restore ALL gain buses to full healthy levels after mood shift.
+    // This is a hard reset — nothing should be ducked after a mood change.
+    if (!this._droneDucked && !this._harmonizeActive) {
+      this.core.musicBus.gain.cancelScheduledValues(now);
+      this.core.musicBus.gain.setValueAtTime(1.0, now);
+
+      this._rampGain(this._vaBus, 0.5, 0.5);
+      this._rampGain(this._fmBus, 0.35, 0.5);
+      this._rampGain(this._wtBus, 0.4, 0.5);
+      if (this.padGain) this._rampGain(this.padGain, 0.45, 0.5);
+    }
+
+    // Reset macro dynamics — start at HIGH intensity so volume doesn't dip
+    this._macro.intensity = 0.85;
+    this._macro.phase = 0;
+    this._macro.arcDuration = 120 + Math.random() * 90;
+    this._macro.shape = this._pickMacroShape();
+
+    // Recovery flag: breathing/macro must NOT duck gains for 12 seconds.
+    // This gives new pad voices time to fully fade in before any modulation.
+    this._moodShiftRecovery = true;
+    setTimeout(() => { this._moodShiftRecovery = false; }, 12000);
+
+    // Apply new params
+    Object.assign(this.params, newParams);
+    this.core.setReverbAmount(this.params.reverbMix);
+
+    // Load instrument presets from brain
+    if (newParams.vaPreset) this.vaSynth.loadPreset(newParams.vaPreset);
+    if (newParams.fmPreset) this.fmSynth.loadPreset(newParams.fmPreset);
+    if (newParams.wtPreset) this.wavetable.loadPreset(newParams.wtPreset);
+
+    // Update melody context (include chords + mood params for emotional shaping)
+    this.melody.setContext(this.params.scale, this.params.baseFreq, this.params.chords, this.params);
+    if (newParams.melodyTimbre) {
+      console.log('[K\u00e1lma] Setting melody timbre to:', newParams.melodyTimbre);
+      this.melody.setTimbre(newParams.melodyTimbre);
+      // User explicitly asked for an instrument - duck drones so melody is the star
+      this._duckDronesForMelody();
+      // Ensure melody engine is running (may not have started yet if emergence was cancelled)
+      if (!this.melody.running) {
+        this.melody.start();
+      }
+      // Ensure melody masterGain is audible
+      if (this.melody._masterGain) {
+        this.melody._masterGain.gain.cancelScheduledValues(this.ctx.currentTime);
+        this.melody._masterGain.gain.setTargetAtTime(0.7, this.ctx.currentTime, 0.2);
+      }
+      // Ensure melody bus is up
+      this._melodyBus.gain.cancelScheduledValues(this.ctx.currentTime);
+      this._melodyBus.gain.setTargetAtTime(0.9, this.ctx.currentTime, 0.3);
+      // Trigger piano/melody now
+      this.melody.triggerNow();
+    }
+
+    // Restart evolve (phrase engine handles chord timing now)
+    if (this.evolveTimer) clearTimeout(this.evolveTimer);
+    if (this.chordTimer) clearTimeout(this.chordTimer);
+    this.chordIndex = 0;
+    if (this.running) {
+      this._evolve();
+      // Chord progression is now driven by phrase engine beats,
+      // but keep _startChordProgression as fallback for initial pad spawn
+      if (this.params.chords) this._spawnInitialPads();
+    }
+  }
+
+  /* ═══ PLAYBACK ═══ */
+  start() {
+    if (this.running) return;
+    this.running = true;
+
+    // Pad gain bus
+    if (!this.padGain) {
+      this.padGain = this.ctx.createGain();
+      this.padGain.gain.value = 0;
+      this.padGain.connect(this.output);
+    }
+
+    // ═══ CONTEXT-AWARE EMERGENCE ═══
+    // The first 30 seconds are the "magic moment" — each layer arrives
+    // as a RESPONSE to detected context. The user should feel:
+    // "The music is listening to my world and building itself from it."
+    this._emerging = true;
+
+    // Mute all buses during emergence — they'll fade in on schedule
+    const now = this.ctx.currentTime;
+    this._vaBus.gain.setValueAtTime(0, now);
+    this._fmBus.gain.setValueAtTime(0, now);
+    this._wtBus.gain.setValueAtTime(0, now);
+    this._melodyBus.gain.setValueAtTime(0, now);
+
+    // Get current context for context-reactive emergence
+    const ctxState = window._kalmaContextState || { timeOfDay: 'afternoon', weather: 'clear', movement: 'still' };
+
+    // Phase 1 (0s): Root drone — the first sound emerges from silence
+    // Pitch/character already shaped by time-of-day (through params)
+    this._spawnRootDrone();
+    console.log('[K\u00e1lma] Emergence: root drone (shaped by', ctxState.timeOfDay, ')...');
+
+    // Phase 2 (~4s): Second drone — harmonic depth arrives faster
+    setTimeout(() => {
+      if (!this.running || !this._emerging) return;
+      this._spawnVoice();
+      console.log('[K\u00e1lma] Emergence: harmonic layer...');
+    }, 4000);
+
+    // Phase 3 (~8s): Pad chords begin — the harmony responds to time/season
+    setTimeout(() => {
+      if (!this.running || !this._emerging) return;
+      this.padGain.gain.setTargetAtTime(0.18, this.ctx.currentTime, 3);
+      if (this.params.chords) this._spawnInitialPads();
+      console.log('[K\u00e1lma] Emergence: chord pads (season/weather response)...');
+    }, 8000);
+
+    // Phase 4 (~12s): VA synth whispers in — texture shaped by weather
+    setTimeout(() => {
+      if (!this.running || !this._emerging) return;
+      // Weather affects how bright the synth enters
+      const weatherBright = (ctxState.weather === 'clear') ? 0.3 :
+                            (ctxState.weather === 'rain' || ctxState.weather === 'fog') ? 0.15 : 0.22;
+      this._vaBus.gain.setTargetAtTime(weatherBright, this.ctx.currentTime, 3.5);
+      this._scheduleInstruments();
+      console.log('[K\u00e1lma] Emergence: VA synth (weather:', ctxState.weather, ')...');
+    }, 12000);
+
+    // Phase 5 (~16s): FM + Wavetable textures — fuller, faster emergence
+    setTimeout(() => {
+      if (!this.running || !this._emerging) return;
+      this._fmBus.gain.setTargetAtTime(0.22, this.ctx.currentTime, 3);
+      this._wtBus.gain.setTargetAtTime(0.28, this.ctx.currentTime, 3);
+      console.log('[K\u00e1lma] Emergence: FM + WT textures...');
+    }, 16000);
+
+    // Phase 6 (~20s): Full texture blooms — start evolve cycle
+    setTimeout(() => {
+      if (!this.running || !this._emerging) return;
+      this.padGain.gain.setTargetAtTime(0.4, this.ctx.currentTime, 2.5);
+      this._vaBus.gain.setTargetAtTime(0.5, this.ctx.currentTime, 2.5);
+      this._fmBus.gain.setTargetAtTime(0.35, this.ctx.currentTime, 2.5);
+      this._wtBus.gain.setTargetAtTime(0.4, this.ctx.currentTime, 2.5);
+      this._evolve();
+      console.log('[K\u00e1lma] Emergence: full texture bloom...');
+    }, 20000);
+
+    // Phase 7 (~25s): Melody engine — arrives as the crowning layer
+    setTimeout(() => {
+      if (!this.running || !this._emerging) return;
+      this.melody.setContext(this.params.scale, this.params.baseFreq, this.params.chords, this.params);
+      this.melody.start();
+      this._melodyBus.gain.setTargetAtTime(0.4, this.ctx.currentTime, 4);
+      console.log('[K\u00e1lma] Emergence: melody enters...');
+    }, 25000);
+
+    // Start phrase engine early (it conducts timing for chords/breathing)
+    const bpm = this.phrase.suggestBpmForContext(ctxState);
+    this.phrase.start(bpm);
+    if (!this._manualBeatMode) this.beats.setBpm(bpm);
+
+    // End emergence — system is fully alive and reactive
+    setTimeout(() => {
+      if (!this.running || !this._emerging) return;
+      this._emerging = false;
+      this._startMacroDynamics();
+      if (this._beatsEnabled) this._startAdaptiveBeats();
+      console.log('[K\u00e1lma] Emergence complete \u2014 all systems active');
+    }, 28000);
+  }
+
+  stop() {
+    this.running = false;
+    this._emerging = false;
+    this._stopMacroDynamics();
+    this.melody.stop();
+    this.phrase.stop();
+    this._clearWalkingTimers();
+    if (this._beatsActive) { this.beats.stop(); this._beatsActive = false; }
+    if (this.evolveTimer) clearTimeout(this.evolveTimer);
+    if (this.chordTimer) clearTimeout(this.chordTimer);
+    const now = this.ctx.currentTime;
+    this.voices.forEach(v => {
+      if (v.alive) {
+        v.alive = false;
+        v.gain.gain.setTargetAtTime(0, now, 3);
+        setTimeout(() => {
+          v.oscs.forEach(o => { try { o.stop(); o.disconnect(); } catch(e){} });
+          try { v.lfo.stop(); v.lfo.disconnect(); } catch(e){}
+          try { v.lfoGain.disconnect(); } catch(e){}
+          try { v.filter.disconnect(); } catch(e){}
+          try { v.gain.disconnect(); } catch(e){}
+          try { if (v.panner) v.panner.disconnect(); } catch(e){}
+        }, 12000);
+      }
+    });
+    this.voices = [];
+    this._stopPads();
+    this._stopInstruments();
+  }
+
+  /* ═══ TEXTURE VOICES (floating drone bed) ═══ */
+  _evolve() {
+    if (!this.running) return;
+    // When piano is active, don't spawn new drone voices
+    if (this._droneDucked) return;
+    this.voices = this.voices.filter(v => v.alive);
+
+    if (this.voices.length < this.params.density) {
+      this._spawnVoice();
+    }
+
+    const interval = (4 + Math.random() * 8) / 0.8;
+    this.evolveTimer = setTimeout(() => this._evolve(), interval * 1000);
+  }
+
+  /* ═══ ROOT DRONE — the very first sound ═══
+     A warm mid-register tone — like the sound of a star:
+     soft, airy, glowing, present but never harsh.
+     Uses layered sines with gentle shimmer for a luminous quality. */
+  _spawnRootDrone() {
+    const now = this.ctx.currentTime;
+    // Mid-low register (not sub-bass) — warm and present
+    const freq = this.params.baseFreq * 0.75; // slightly below base — warm but audible
+    const p = this.params;
+
+    const oscs = [];
+    // Gentle detuning creates a shimmering, star-like quality
+    const detuneAmounts = [-5, 0, 5, -2, 2];
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    // Higher cutoff for more presence and airiness
+    filter.frequency.value = Math.max(600, Math.min(p.filterFreq * 0.7, 1000));
+    filter.Q.value = 0.4;
+
+    // Slow shimmer LFO — creates gentle twinkling
+    const lfo = this.ctx.createOscillator();
+    const lfoGain = this.ctx.createGain();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.04; // gentle shimmer rate
+    lfoGain.gain.value = 80; // moderate filter movement for shimmering
+    lfo.connect(lfoGain);
+    lfoGain.connect(filter.frequency);
+    lfo.start(now);
+
+    // 5 oscillators: 3 sine (warmth) + 2 triangle (airiness/shimmer)
+    for (let i = 0; i < 5; i++) {
+      const osc = this.ctx.createOscillator();
+      osc.type = i < 3 ? 'sine' : 'triangle';
+      osc.frequency.value = freq;
+      osc.detune.value = detuneAmounts[i];
+      osc.connect(filter);
+      osc.start(now);
+      oscs.push(osc);
+    }
+
+    // Add a subtle high shimmer (octave + 5th above, very quiet) for star-like glow
+    const shimmerOsc = this.ctx.createOscillator();
+    shimmerOsc.type = 'sine';
+    shimmerOsc.frequency.value = freq * 3; // octave + fifth (3rd harmonic)
+    const shimmerGain = this.ctx.createGain();
+    shimmerGain.gain.value = 0;
+    shimmerGain.gain.setTargetAtTime(0.015, now + 3, 4); // fade in very slowly
+    shimmerOsc.connect(shimmerGain);
+    shimmerGain.connect(filter);
+    shimmerOsc.start(now);
+    oscs.push(shimmerOsc);
+
+    const panner = this.ctx.createStereoPanner();
+    panner.pan.value = 0; // center
+    filter.connect(gain);
+    gain.connect(panner);
+    panner.connect(this.output);
+
+    // Smooth attack: ~6 second fade from nothing
+    gain.gain.setTargetAtTime(0.14, now, 2.5);
+
+    // This drone lives longer than normal (40-55s) to anchor the emergence
+    const lifetime = 40 + Math.random() * 15;
+    const voice = { oscs, gain, filter, lfo, lfoGain, panner, freq, alive: true };
+    setTimeout(() => {
+      if (voice.alive) this._fadeOutVoice(voice, this.ctx.currentTime);
+    }, lifetime * 1000);
+
+    this.voices.push(voice);
+  }
+
+  _getRandomNote() {
+    // Drones should only use CONSONANT intervals - root, 5th, octave, sometimes 4th
+    // This creates a warm, stable harmonic bed (like a pipe organ drone)
+    // Never use 2nds, 3rds, 6ths, or 7ths - those create tension/movement
+    const consonantIntervals = [0, 0, 0, 7, 7, 12, 5]; // weighted toward root + 5th
+    const degree = consonantIntervals[Math.floor(Math.random() * consonantIntervals.length)];
+    // Mid-low register — mostly at base octave, occasionally one above for shimmer
+    // Never go below base — keeps drones warm and present, not muddy
+    const octave = Math.random() < 0.2 ? 1 : 0;
+    return this.params.baseFreq * Math.pow(2, (degree / 12) + octave);
+  }
+
+  _spawnVoice() {
+    const now = this.ctx.currentTime;
+    const freq = this._getRandomNote();
+    const p = this.params;
+
+    const oscs = [];
+    // Gentle detuning for a shimmering, star-like chorus
+    const detuneAmounts = [-p.detune * 0.5, -p.detune * 0.15, 0, p.detune * 0.15, p.detune * 0.5];
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    // Present but warm — higher cutoff for more air and shimmer
+    filter.frequency.value = Math.max(550, Math.min(p.filterFreq * 0.8, 1100));
+    filter.Q.value = Math.min(p.filterQ, 0.6); // very gentle resonance
+
+    const lfo = this.ctx.createOscillator();
+    const lfoGain = this.ctx.createGain();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.02 + Math.random() * 0.04; // gentle shimmer
+    lfoGain.gain.value = 100 + Math.random() * 80; // moderate filter sweep for sparkle
+    lfo.connect(lfoGain);
+    lfoGain.connect(filter.frequency);
+    lfo.start(now);
+
+    // 5 oscillators: mix of sine (core warmth) and triangle (airiness)
+    for (let i = 0; i < 5; i++) {
+      const osc = this.ctx.createOscillator();
+      // First 3 sine for warmth, last 2 triangle for air/shimmer
+      osc.type = i < 3 ? 'sine' : 'triangle';
+      osc.frequency.value = freq;
+      osc.detune.value = detuneAmounts[i] + (Math.random() - 0.5) * 2;
+      osc.connect(filter);
+      osc.start(now);
+      oscs.push(osc);
+    }
+
+    // Stereo panner - wider spread for immersive soundstage
+    const panner = this.ctx.createStereoPanner();
+    const panAmount = (this._padVoiceCount % 2 === 0) ? -0.18 : 0.18;
+    panner.pan.value = panAmount + (Math.random() - 0.5) * 0.08;
+    this._padVoiceCount++;
+
+    filter.connect(gain);
+    gain.connect(panner);
+    panner.connect(this.output);
+
+    // Smooth attack — drones fade in gently but are clearly audible
+    const attackTime = Math.max(p.attack * 0.7, 4);
+    gain.gain.setTargetAtTime(0.12 / Math.max(p.density, 2), now, attackTime);
+
+    const lifetime = 18 + Math.random() * 25;
+    const voice = { oscs, gain, filter, lfo, lfoGain, panner, freq, alive: true };
+
+    setTimeout(() => {
+      if (voice.alive) this._fadeOutVoice(voice, this.ctx.currentTime);
+    }, lifetime * 1000);
+
+    this.voices.push(voice);
+  }
+
+  _fadeOutVoice(voice, now) {
+    voice.alive = false;
+    const releaseTime = Math.max(this.params.release, 5);
+    voice.gain.gain.setTargetAtTime(0, now, releaseTime);
+    setTimeout(() => {
+      voice.oscs.forEach(o => { try { o.stop(); o.disconnect(); } catch(e){} });
+      try { voice.lfo.stop(); voice.lfo.disconnect(); } catch(e){}
+      try { voice.lfoGain.disconnect(); } catch(e){}
+      try { voice.filter.disconnect(); } catch(e){}
+      try { voice.gain.disconnect(); } catch(e){}
+      try { if (voice.panner) voice.panner.disconnect(); } catch(e){}
+    }, (releaseTime + 4) * 1000);
+  }
+
+  /* ═══ CHORD PADS (slow, overlapping) ═══ */
+  padVoices = [];
+
+  _startChordProgression() {
+    if (!this.params.chords) return;
+    const chords = this.params.chords;
+    this.chordIndex = 0;
+
+    if (!this.padGain) {
+      this.padGain = this.ctx.createGain();
+      this.padGain.gain.value = 0.4;
+      this.padGain.connect(this.output);
+    }
+
+    const playChord = () => {
+      if (!this.running || !chords) return;
+      const chord = chords[this.chordIndex % chords.length];
+      this.chordIndex++;
+      const now = this.ctx.currentTime;
+
+      // Fade old pads very slowly
+      const oldPads = this.padVoices;
+      this.padVoices = [];
+      oldPads.forEach(pv => {
+        if (pv.alive) {
+          pv.alive = false;
+          pv.gain.gain.setTargetAtTime(0, now, 8);
+          setTimeout(() => {
+            pv.oscs.forEach(o => { try { o.stop(); o.disconnect(); } catch(e){} });
+            try { pv.filter.disconnect(); } catch(e){}
+            try { pv.gain.disconnect(); } catch(e){}
+            try { if (pv.panner) pv.panner.disconnect(); } catch(e){}
+          }, 28000);
+        }
+      });
+
+      // Spawn pad for each note (max 3)
+      chord.slice(0, 3).forEach((semitone, idx) => {
+        const freq = this.params.baseFreq * Math.pow(2, semitone / 12);
+        const octave = idx === 0 ? 0.5 : 1;
+        const finalFreq = freq * octave;
+
+        const gain = this.ctx.createGain();
+        gain.gain.value = 0;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = Math.min(this.params.filterFreq * 0.7, 700);
+        filter.Q.value = 0.5;
+
+        const oscs = [];
+        const det = [-this.params.detune * 1.2, -this.params.detune * 0.4,
+                     this.params.detune * 0.4, this.params.detune * 1.2];
+
+        for (let i = 0; i < 4; i++) {
+          const osc = this.ctx.createOscillator();
+          osc.type = 'triangle';  // all triangle for warmth
+          osc.frequency.value = finalFreq;
+          osc.detune.value = det[i] + (Math.random() - 0.5) * 6;
+          osc.connect(filter);
+          osc.start(now);
+          oscs.push(osc);
+        }
+
+        filter.connect(gain);
+        gain.connect(this.padGain);
+
+        const attackTime = 6 + idx * 1.5;
+        const targetVol = 0.14 / chord.length;
+        gain.gain.setTargetAtTime(targetVol, now + idx * 1.2, attackTime);
+
+        this.padVoices.push({ oscs, gain, filter, alive: true });
+      });
+
+      // Trigger instrument notes with each chord change
+      this._scheduleInstruments();
+
+      const interval = 25000 + Math.random() * 15000;
+      this.chordTimer = setTimeout(playChord, interval);
+    };
+
+    this.chordTimer = setTimeout(playChord, 3000);
+  }
+
+  _stopPads() {
+    const now = this.ctx.currentTime;
+    this.padVoices.forEach(pv => {
+      if (pv.alive) {
+        pv.alive = false;
+        pv.gain.gain.setTargetAtTime(0, now, 4);
+        setTimeout(() => {
+          pv.oscs.forEach(o => { try { o.stop(); o.disconnect(); } catch(e){} });
+          try { pv.filter.disconnect(); } catch(e){}
+          try { pv.gain.disconnect(); } catch(e){}
+            try { if (pv.panner) pv.panner.disconnect(); } catch(e){}
+        }, 15000);
+      }
+    });
+    this.padVoices = [];
+  }
+
+  /* ═══ INITIAL PAD SPAWN (on start/crossfade) ═══ */
+  _spawnInitialPads() {
+    if (!this.params.chords || this.params.chords.length === 0) return;
+
+    if (!this.padGain) {
+      this.padGain = this.ctx.createGain();
+      this.padGain.gain.value = 0.4;
+      this.padGain.connect(this.output);
+    }
+
+    // Spawn pads for first chord
+    const chord = this.params.chords[0];
+    this._spawnPadForChord(chord);
+    this._scheduleInstruments();
+  }
+
+  /* ═══ TRANSITION PAD CHORD (phrase-driven) ═══ */
+  _transitionPadChord(chord) {
+    if (!chord) return;
+    const now = this.ctx.currentTime;
+
+    // Fade old pads slowly (crossfade)
+    const oldPads = this.padVoices;
+    this.padVoices = [];
+    oldPads.forEach(pv => {
+      if (pv.alive) {
+        pv.alive = false;
+        pv.gain.gain.setTargetAtTime(0, now, 8);
+        setTimeout(() => {
+          pv.oscs.forEach(o => { try { o.stop(); o.disconnect(); } catch(e){} });
+          try { pv.filter.disconnect(); } catch(e){}
+          try { pv.gain.disconnect(); } catch(e){}
+            try { if (pv.panner) pv.panner.disconnect(); } catch(e){}
+        }, 28000);
+      }
+    });
+
+    this._spawnPadForChord(chord);
+  }
+
+  /* ═══ SPAWN PAD FOR A SPECIFIC CHORD (voice-led, musically spaced) ═══ */
+  _spawnPadForChord(chord) {
+    if (!chord || !this.padGain) return;
+    const now = this.ctx.currentTime;
+
+
+    // Voice the chord in a warm mid register with good spacing:
+    // Voice count (max 3)
+    const voiceCount = Math.min(3, chord.length);
+    const voicings = chord.slice(0, voiceCount).map((semitone, idx) => {
+      const rawFreq = this.params.baseFreq * Math.pow(2, semitone / 12);
+      let octMult;
+      if (idx === 0) octMult = 0.75;      // bass: slightly below base (warm, not muddy)
+      else if (idx === 1) octMult = 1.0;   // mid: at base octave
+      else octMult = 1.25;                 // top: slightly above (shimmer)
+
+      // Voice leading: if we have previous pad voicings, find closest octave
+      let finalFreq = rawFreq * octMult;
+      if (this._prevPadFreqs && this._prevPadFreqs[idx]) {
+        const prev = this._prevPadFreqs[idx];
+        // Try this octave and +/- one octave, pick closest
+        const candidates = [finalFreq * 0.5, finalFreq, finalFreq * 2];
+        finalFreq = candidates.reduce((best, f) =>
+          Math.abs(f - prev) < Math.abs(best - prev) ? f : best
+        );
+      }
+      return finalFreq;
+    });
+
+    // Store for next chord's voice leading
+    this._prevPadFreqs = voicings;
+
+    voicings.forEach((finalFreq, idx) => {
+      const gain = this.ctx.createGain();
+      gain.gain.value = 0;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      // Warm but not muddy - between 500-800Hz
+      filter.frequency.value = Math.max(500, Math.min(this.params.filterFreq * 0.6, 800));
+      filter.Q.value = 0.4; // very gentle, no resonance peak
+
+      const oscs = [];
+      // Gentle detuning for chorus width
+      const det = [-this.params.detune * 0.7, -this.params.detune * 0.2,
+                   this.params.detune * 0.2, this.params.detune * 0.7];
+
+      for (let i = 0; i < 4; i++) {
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = finalFreq;
+        osc.detune.value = det[i] + (Math.random() - 0.5) * 3;
+        osc.connect(filter);
+        osc.start(now);
+        oscs.push(osc);
+      }
+
+      // Stereo panner - alternate pad voices slightly left/right
+      const panner = this.ctx.createStereoPanner();
+      const panAmount = (this._padVoiceCount % 2 === 0) ? -0.12 : 0.12;
+      panner.pan.value = panAmount;
+      this._padVoiceCount++;
+
+      filter.connect(gain);
+      gain.connect(panner);
+      panner.connect(this.padGain);
+
+      // Faster attack for smoother mood transitions
+      const attackTime = 3 + idx * 0.8; // faster fade-in so mood shifts don't feel like volume drops
+      const targetVol = 0.10 / chord.length; // slightly louder per-voice
+      gain.gain.setTargetAtTime(targetVol, now + idx * 1.0, attackTime);
+
+      this.padVoices.push({ oscs, gain, filter, panner, alive: true });
+    });
+  }
+
+  /* ═══ INSTRUMENT LAYER (VA + FM + Wavetable - voice-led chord assignment) ═══ */
+  _scheduleInstruments() {
+    if (!this.running) return;
+    // When piano or harmonize is active, synth instruments are silenced
+    if (this._droneDucked || this._harmonizeActive) return;
+
+    const baseNote = Math.round(69 + 12 * Math.log2(this.params.baseFreq / 440));
+    const chord = (this.params.chords && this.params.chords.length > 0)
+      ? this.params.chords[this.chordIndex % this.params.chords.length]
+      : [0, 4, 7]; // fallback major triad
+
+    // --- Voice-led note selection ---
+    // For each instrument, find the nearest chord tone to its previous note.
+    // This creates smooth, connected harmony instead of random jumps.
+
+    // VA Synth: plays root, voiced in bass register
+    const vaTarget = baseNote + chord[0];
+    if (this._vaNote !== null) {
+      this.vaSynth.noteOff(this._vaNote);
+      // Voice lead: pick the octave closest to previous note
+      const candidates = [vaTarget - 12, vaTarget, vaTarget + 12];
+      this._vaNote = candidates.reduce((best, c) =>
+        Math.abs(c - this._vaNote) < Math.abs(best - this._vaNote) ? c : best
+      );
+    } else {
+      this._vaNote = vaTarget; // first time
+    }
+    this.vaSynth.noteOn(this._vaNote, 0.4);
+
+    // Wavetable: 5th of chord (most consonant non-root interval)
+    // Voice-led: pick closest between 3rd and 5th to previous note
+    if (this._wtNote !== null) this.wavetable.noteOff(this._wtNote);
+    if (chord.length >= 3) {
+      const fifth = baseNote + chord[2];
+      const third = baseNote + chord[1];
+      if (this._prevWtNote !== undefined) {
+        // Check both octaves for each option
+        const options = [third, third + 12, fifth, fifth + 12, fifth - 12];
+        let bestOpt = fifth;
+        let bestDist = Infinity;
+        for (const opt of options) {
+          const d = Math.abs(opt - this._prevWtNote);
+          if (d < bestDist) { bestDist = d; bestOpt = opt; }
+        }
+        this._wtNote = bestOpt;
+      } else {
+        this._wtNote = fifth;
+      }
+      this._prevWtNote = this._wtNote;
+    } else {
+      this._wtNote = baseNote + chord[Math.min(1, chord.length - 1)];
+      this._prevWtNote = this._wtNote;
+    }
+    this.wavetable.noteOn(this._wtNote, 0.4);
+
+    // FM Synth: color tone (octave or 5th above root) - delayed entry
+    // Enters 2-3 seconds after chord change for musical tension/release
+    const delay = 2000 + Math.random() * 1500;
+    setTimeout(() => {
+      if (!this.running || this._droneDucked || this._harmonizeActive) return;
+      if (this._fmNote !== null) this.fmSynth.noteOff(this._fmNote);
+      // Safe intervals: octave (12), 5th (7), unison (0)
+      const safeTones = [12, 7, 0, 12, 7];
+      const colorTone = safeTones[Math.floor(Math.random() * safeTones.length)];
+      const fmTarget = baseNote + chord[0] + colorTone;
+      // Voice lead FM too
+      if (this._fmNote !== null) {
+        const fmOpts = [fmTarget - 12, fmTarget, fmTarget + 12];
+        this._fmNote = fmOpts.reduce((best, c) =>
+          Math.abs(c - this._fmNote) < Math.abs(best - this._fmNote) ? c : best
+        );
+      } else {
+        this._fmNote = fmTarget;
+      }
+      this.fmSynth.noteOn(this._fmNote, 0.25); // very quiet texture
+    }, delay);
+
+    this._instTimer = null; // chord progression triggers this
+  }
+
+  _stopInstruments() {
+    if (this._vaNote !== null) { this.vaSynth.noteOff(this._vaNote); this._vaNote = null; }
+    if (this._fmNote !== null) { this.fmSynth.noteOff(this._fmNote); this._fmNote = null; }
+    if (this._wtNote !== null) { this.wavetable.noteOff(this._wtNote); this._wtNote = null; }
+    if (this._instTimer) { clearTimeout(this._instTimer); this._instTimer = null; }
+  }
+
+  /* ═══ DRONE DUCKING FOR MELODY ═══ */
+  _duckDronesForMelody() {
+    this._droneDucked = true;
+    const now = this.ctx.currentTime;
+    // SILENCE the three synth instruments entirely - piano is the star
+    // Release any held notes so VA/FM/WT stop producing sound
+    this._stopInstruments();
+    this._vaBus.gain.setTargetAtTime(0, now, 0.6);
+    this._fmBus.gain.setTargetAtTime(0, now, 0.6);
+    this._wtBus.gain.setTargetAtTime(0, now, 0.6);
+    // Fade pad drones to near-silent (just a whisper of harmonic context)
+    if (this.padGain) this.padGain.gain.setTargetAtTime(0.03, now, 1);
+    // Also fade out texture drone voices (the _evolve spawned oscillators)
+    this.voices.forEach(v => {
+      if (v.alive) {
+        v.alive = false;
+        v.gain.gain.setTargetAtTime(0, now, 1.5);
+        setTimeout(() => {
+          v.oscs.forEach(o => { try { o.stop(); o.disconnect(); } catch(e){} });
+          try { v.lfo.stop(); v.lfo.disconnect(); } catch(e){}
+          try { v.lfoGain.disconnect(); } catch(e){}
+          try { v.filter.disconnect(); } catch(e){}
+          try { v.gain.disconnect(); } catch(e){}
+          try { if (v.panner) v.panner.disconnect(); } catch(e){}
+        }, 10000);
+      }
+    });
+    this.voices = [];
+    // Stop spawning new drone voices
+    if (this.evolveTimer) { clearTimeout(this.evolveTimer); this.evolveTimer = null; }
+    // Boost melody bus prominently
+    this._melodyBus.gain.setTargetAtTime(0.9, now, 0.3);
+    console.log('[Kálma] All drones/synths silenced for piano mode, melody bus → 0.9');
+  }
+
+  /* ═══ HARMONIZE MODE ═══
+     When the user activates Harmonize, duck ALL instruments to near-silence
+     so only the harmony notes (played via melody engine) are audible alongside
+     their voice. When they stop, restore everything. */
+  _enterHarmonizeMode() {
+    if (this._harmonizeActive) return;
+    this._harmonizeActive = true;
+    const now = this.ctx.currentTime;
+
+    // Save current gain levels so we can restore them
+    this._preHarmonize = {
+      vaBus: this._vaBus.gain.value,
+      fmBus: this._fmBus.gain.value,
+      wtBus: this._wtBus.gain.value,
+      padGain: this.padGain ? this.padGain.gain.value : 0.4,
+      melodyBus: this._melodyBus.gain.value,
+      musicBus: this.core.musicBus.gain.value
+    };
+
+    // Stop the melody engine's autonomous playing (we only want harmony notes)
+    this.melody.stop();
+    // But keep its audio chain alive for harmony notes
+    if (this.melody._masterGain) {
+      this.melody._masterGain.gain.cancelScheduledValues(now);
+      this.melody._masterGain.gain.setTargetAtTime(0.6, now, 0.3);
+    }
+
+    // Duck drones and synths to a whisper (keep a tiny bed for warmth)
+    this._stopInstruments();
+    this._rampGain(this._vaBus, 0.03, 2);
+    this._rampGain(this._fmBus, 0.02, 2);
+    this._rampGain(this._wtBus, 0.03, 2);
+    if (this.padGain) this._rampGain(this.padGain, 0.05, 2);
+
+    // Fade out texture drones
+    this.voices.forEach(v => {
+      if (v.alive) {
+        v.alive = false;
+        v.gain.gain.setTargetAtTime(0, now, 2);
+      }
+    });
+    // Stop spawning new drones
+    if (this.evolveTimer) { clearTimeout(this.evolveTimer); this.evolveTimer = null; }
+
+    // Ensure melody bus is clearly audible (harmony notes go through it)
+    this._melodyBus.gain.setTargetAtTime(0.8, now, 0.3);
+
+    // Pause macro dynamics (don't let them modulate during harmonize)
+    this._stopMacroDynamics();
+
+    console.log('[K\u00e1lma] Harmonize mode ON - instruments ducked, listening for voice');
+  }
+
+  _exitHarmonizeMode() {
+    if (!this._harmonizeActive) return;
+    this._harmonizeActive = false;
+    this._droneDucked = false;
+    const now = this.ctx.currentTime;
+    const pre = this._preHarmonize || {};
+
+    // First: ensure musicBus is at full level
+    this.core.musicBus.gain.cancelScheduledValues(now);
+    this.core.musicBus.gain.setValueAtTime(this.core.musicBus.gain.value, now);
+    this.core.musicBus.gain.setTargetAtTime(1.0, now, 1);
+
+    // Restore pad gain first (this is the warm bed)
+    if (this.padGain) this._rampGain(this.padGain, pre.padGain || 0.4, 3);
+    this._melodyBus.gain.setTargetAtTime(pre.melodyBus || 0.4, now, 1);
+
+    // Start buses at 0, let evolve+phrase bring them in naturally
+    this._rampGain(this._vaBus, 0, 0.1);
+    this._rampGain(this._fmBus, 0, 0.1);
+    this._rampGain(this._wtBus, 0, 0.1);
+
+    // Restart drones (texture bed)
+    if (this.running) this._evolve();
+
+    // Restart chord pads for harmonic bed
+    if (this.running && this.params.chords) {
+      this._spawnInitialPads();
+    }
+
+    // Wait for drones/pads to establish before bringing synth instruments back
+    if (this.running) {
+      setTimeout(() => {
+        if (!this.running || this._harmonizeActive) return;
+        this._rampGain(this._vaBus, pre.vaBus || 0.35, 3);
+        this._rampGain(this._fmBus, pre.fmBus || 0.25, 3);
+        this._rampGain(this._wtBus, pre.wtBus || 0.3, 3);
+        this._scheduleInstruments();
+      }, 4000);
+    }
+
+    // Restart melody engine
+    if (this.running) {
+      this.melody.setContext(this.params.scale, this.params.baseFreq, this.params.chords, this.params);
+      this.melody.start();
+    }
+
+    // Resume macro dynamics with healthy starting intensity
+    this._macro.intensity = 0.6;
+    this._macro.phase = 0;
+    if (this.running) this._startMacroDynamics();
+
+    console.log('[K\u00e1lma] Harmonize mode OFF \u2014 restoring gradually');
+  }
+
+  /* ═══ PROMPT MOOD (via Music Brain + State Model) ═══ */
+  async applyPromptMood(text) {
+    // User is actively shifting mood — cancel emergence if still running
+    if (this._emerging) {
+      this._emerging = false;
+      console.log('[K\u00e1lma] Emergence cancelled — user shifted mood');
+    }
+
+    // Try AI interpretation first (async), fall back to rule-based
+    let musical = null;
+    let source = 'rules';
+
+    try {
+      musical = await this.brain.interpretWithAI(text);
+      if (musical) source = 'ai';
+    } catch (e) {
+      console.warn('[Kálma] AI interpret failed, using rules');
+    }
+
+    if (!musical) {
+      musical = this.brain.interpret({ text });
+    }
+
+    // Audio path uses brain output directly (proven stable)
+    console.log('[Kálma Brain] (' + source + ') Text "' + text + '" → Music:', musical);
+    this._crossfadeTo(musical);
+
+    // Check if text implies movement - only these trigger beats
+    const t = text.toLowerCase();
+    if (/run|jog|sprint|workout|exercise|dance|active|moving|gym|cardio/.test(t)) {
+      this._handleMovementBeats('active');
+    } else if (/walk|stroll|hike|wander/.test(t)) {
+      this._handleMovementBeats('walking');
+    }
+
+    return { source, musical };
+  }
+
+  /* ═══ ANALYSER ═══ */
+  getAnalyser() {
+    if (!this._analyser) {
+      this._analyser = this.ctx.createAnalyser();
+      this._analyser.fftSize = 256;
+      this.output.connect(this._analyser);
+    }
+    return this._analyser;
+  }
+}

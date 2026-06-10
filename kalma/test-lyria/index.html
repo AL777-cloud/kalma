@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kálma — Lyria Music Test</title>
+    <style>
+        body { background: #0a0a12; color: #e8e6f0; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        h1 { font-size: 1.5rem; font-weight: 300; margin-bottom: 8px; color: #8b83ff; }
+        p { color: #9a96b0; font-size: 0.85rem; margin-bottom: 24px; }
+        .controls { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 400px; padding: 0 20px; }
+        select, input, button { padding: 12px 16px; background: #1e1e35; border: 1px solid rgba(108,99,255,0.2); border-radius: 10px; color: #e8e6f0; font-size: 0.9rem; outline: none; }
+        select { cursor: pointer; }
+        button { cursor: pointer; background: linear-gradient(135deg, #6c63ff, #8b5cf6); border: none; font-weight: 500; letter-spacing: 0.03em; }
+        button:hover { opacity: 0.9; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        #status { color: #9a96b0; font-size: 0.8rem; text-align: center; min-height: 3em; margin-top: 16px; }
+        #audio-player { margin-top: 16px; width: 100%; max-width: 400px; }
+        .log { font-size: 0.7rem; color: #6b6880; max-height: 150px; overflow-y: auto; width: 100%; max-width: 400px; margin-top: 16px; padding: 0 20px; }
+    </style>
+</head>
+<body>
+    <h1>Kálma — Lyria Music Test</h1>
+    <p>Testing AI-generated music via Google Lyria 3</p>
+
+    <div class="controls">
+        <select id="mood">
+            <option value="calm ambient meditation music, peaceful, ethereal pads">Meditate</option>
+            <option value="relaxing ambient music for unwinding, warm pads, gentle">Unwind</option>
+            <option value="soothing ambient music for deep sleep, very slow, minimal drone">Sleep</option>
+            <option value="lo-fi hip hop beats for studying, warm vinyl, jazzy chords">Reading (Lo-fi)</option>
+            <option value="uplifting ambient music, hopeful, bright, gentle piano">Uplift</option>
+            <option value="contemplative ambient music, minor key, introspective">Introspection</option>
+            <option value="creative flow ambient music, experimental, playful electronic">Creative</option>
+            <option value="clear focused ambient music, minimal, clean, crystalline">Clarity</option>
+        </select>
+        <input type="text" id="custom-prompt" placeholder="Or type a custom prompt...">
+        <button id="btn-generate" onclick="generateMusic()">Generate Music</button>
+        <button id="btn-loop" onclick="toggleLoop()" disabled>Start Continuous Loop</button>
+    </div>
+
+    <div id="status">Ready — pick a mood and generate</div>
+    <audio id="audio-player" controls></audio>
+    <div class="log" id="log"></div>
+
+    <script>
+        const API_KEY = '';
+        const API_URL = 'https://generativelanguage.googleapis.com/v1alpha/models/lyria-3-clip-preview:generateContent';
+
+        let looping = false;
+        let currentAudio = null;
+
+        function log(msg) {
+            const el = document.getElementById('log');
+            el.innerHTML += new Date().toLocaleTimeString() + ' — ' + msg + '<br>';
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function setStatus(msg) {
+            document.getElementById('status').textContent = msg;
+        }
+
+        async function generateMusic() {
+            const custom = document.getElementById('custom-prompt').value.trim();
+            const mood = custom || document.getElementById('mood').value;
+            const btn = document.getElementById('btn-generate');
+
+            btn.disabled = true;
+            setStatus('Generating music... (this takes 5-15 seconds)');
+            log('Requesting: ' + mood.slice(0, 60) + '...');
+
+            try {
+                const response = await fetch(API_URL + '?key=' + API_KEY, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{ text: mood }]
+                        }],
+                        generationConfig: {
+                            responseModalities: ['AUDIO'],
+                            speechConfig: {
+                                voiceConfig: {
+                                    prebuiltVoiceConfig: {
+                                        voiceName: 'Lyria'
+                                    }
+                                }
+                            }
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                log('Response status: ' + response.status);
+
+                if (data.candidates && data.candidates[0]) {
+                    const parts = data.candidates[0].content.parts;
+                    for (const part of parts) {
+                        if (part.inlineData) {
+                            log('Got audio! MIME: ' + part.inlineData.mimeType + ', size: ' + part.inlineData.data.length + ' chars');
+
+                            // Convert base64 to blob and play
+                            const audioBytes = atob(part.inlineData.data);
+                            const arr = new Uint8Array(audioBytes.length);
+                            for (let i = 0; i < audioBytes.length; i++) arr[i] = audioBytes.charCodeAt(i);
+                            const blob = new Blob([arr], { type: part.inlineData.mimeType || 'audio/wav' });
+                            const url = URL.createObjectURL(blob);
+
+                            const player = document.getElementById('audio-player');
+                            player.src = url;
+                            player.play();
+                            currentAudio = player;
+                            setStatus('Playing! Duration will vary.');
+
+                            document.getElementById('btn-loop').disabled = false;
+
+                            // If looping, generate next clip when this one is near the end
+                            if (looping) {
+                                player.onended = () => generateMusic();
+                            }
+                        }
+                    }
+                } else if (data.error) {
+                    log('Error: ' + data.error.message);
+                    setStatus('Error: ' + data.error.message);
+                } else {
+                    log('Unexpected response: ' + JSON.stringify(data).slice(0, 300));
+                    setStatus('Unexpected response — check log');
+                }
+            } catch (e) {
+                log('Fetch error: ' + e.message);
+                setStatus('Error: ' + e.message);
+            }
+
+            btn.disabled = false;
+        }
+
+        function toggleLoop() {
+            looping = !looping;
+            const btn = document.getElementById('btn-loop');
+            btn.textContent = looping ? 'Stop Loop' : 'Start Continuous Loop';
+            if (looping && currentAudio) {
+                currentAudio.onended = () => generateMusic();
+                log('Looping enabled — will auto-generate next clip');
+            } else {
+                if (currentAudio) currentAudio.onended = null;
+                log('Looping disabled');
+            }
+        }
+    </script>
+</body>
+</html>

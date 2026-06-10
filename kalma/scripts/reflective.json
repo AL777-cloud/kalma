@@ -1,0 +1,60 @@
+{
+  "style": "reflective",
+  "name": "Reflective",
+  "voiceSettings": {
+    "rate": 0.80,
+    "pitch": 0.93
+  },
+  "intro": [
+    "Welcome to this space of reflection.",
+    "Here, there are no right answers. Only honest ones.",
+    "Let your breathing slow. Let the noise of the day fade.",
+    "We're going to explore some questions together.",
+    "You don't have to answer out loud. Just let the questions land.",
+    "See what surfaces. Trust what comes."
+  ],
+  "body": [
+    [
+      "Ask yourself quietly: How am I really doing?",
+      "Not the answer you give to others. The real one.",
+      "Sit with it. Whatever it is, it's valid.",
+      "You don't have to fix how you feel. Just acknowledge it.",
+      "Being honest with yourself is the beginning of everything."
+    ],
+    [
+      "What has been asking for your attention that you've been avoiding?",
+      "It might be a feeling. A conversation. A decision.",
+      "Avoidance doesn't make things disappear. It just makes them heavier.",
+      "What would it feel like to gently turn toward it instead of away?",
+      "You don't have to act. Just look."
+    ],
+    [
+      "Think about what matters most to you. Not what should matter. What actually does.",
+      "Are your days aligned with that? Even a little?",
+      "If not, that's not failure. That's awareness. And awareness is the first step.",
+      "What's one tiny thing you could do tomorrow that would move you closer?",
+      "Hold that thought. It's a seed."
+    ],
+    [
+      "Who have you been lately? Not who you want to be. Who have you actually been?",
+      "Have you been kind to yourself? Have you been present?",
+      "If the answer is no, that's okay. You're noticing now.",
+      "Every moment is a chance to choose differently.",
+      "What would you like to choose next?"
+    ],
+    [
+      "Imagine yourself one year from now.",
+      "What do you hope has changed? What do you hope has stayed the same?",
+      "That future version of you is being shaped right now, in these quiet moments.",
+      "What message would you send them? What would you want them to know?",
+      "Sit with that connection. Past you, present you, future you. All one."
+    ]
+  ],
+  "closing": [
+    "There's no need to resolve everything today.",
+    "The questions you've asked will continue to work inside you, even after this session ends.",
+    "Trust the process. Trust yourself.",
+    "Take a deep breath and slowly return to the room.",
+    "Open your eyes when you're ready. You've done something brave today."
+  ]
+}
