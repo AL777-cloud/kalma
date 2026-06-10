@@ -1,14 +1,20 @@
 {
-  "buildCommand": null,
-  "outputDirectory": "kalma-player/app",
+  "buildCommand": "sh build.sh",
+  "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/interpret-mood", "destination": "/api/interpret-mood" }
+    { "source": "/api/interpret-mood", "destination": "/api/interpret-mood" },
+    { "source": "/api/chat", "destination": "/api/chat" },
+    { "source": "/chat/api/interpret-mood", "destination": "/api/interpret-mood" },
+    { "source": "/chat/api/chat", "destination": "/api/chat" },
+    { "source": "/audiolab/api/interpret-mood", "destination": "/api/interpret-mood" }
   ],
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/api/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" }
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "POST, GET, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type" }
       ]
     }
   ]
