@@ -1,0 +1,61 @@
+{
+  "theme": "inner-dialogue",
+  "name": "Inner Dialogue",
+  "voiceSettings": {
+    "rate": 0.80,
+    "pitch": 0.93
+  },
+  "intro": [
+    "Welcome. Today we're going to listen inward.",
+    "Inside each of us, there are many voices. The critic. The protector. The dreamer. The child.",
+    "Most of the time, they talk over each other. Or one drowns the rest out.",
+    "Right now, we're going to give each one a moment to speak.",
+    "You don't have to agree with any of them. Just listen.",
+    "Let's get quiet enough to hear."
+  ],
+  "body": [
+    [
+      "First, notice which voice is loudest right now.",
+      "Is it the planner, listing everything that needs to be done?",
+      "Is it the worrier, running through worst-case scenarios?",
+      "Is it the critic, pointing out what you did wrong?",
+      "Don't silence it. Just acknowledge it. Say inwardly: I hear you.",
+      "Sometimes that's all a voice needs to quiet down."
+    ],
+    [
+      "Now look for a quieter voice. One that's been waiting.",
+      "It might be the part of you that's tired and needs rest.",
+      "Or the part that has a dream you've been ignoring.",
+      "Or the part that just wants to play, to laugh, to be light.",
+      "What does this voice want to say? Give it room."
+    ],
+    [
+      "There's a part of you that remembers being very young.",
+      "Before the armor. Before the masks. Before you learned what was acceptable.",
+      "What did that younger you love? What made them light up?",
+      "That child is still in you. Not as a memory. As a living presence.",
+      "What do they need from you today?"
+    ],
+    [
+      "Now find the voice of your deepest wisdom. The one that speaks rarely but clearly.",
+      "It doesn't shout. It doesn't argue. It just knows.",
+      "If you asked it one question right now, what would you ask?",
+      "Sit in silence for a moment and wait for the answer.",
+      "It may come as words. Or a feeling. Or just a knowing."
+    ],
+    [
+      "All these voices are you. Not enemies. Not problems. Parts of a whole.",
+      "The critic is trying to protect you. The worrier is trying to prepare you.",
+      "The child is trying to remind you what joy feels like.",
+      "What if, instead of fighting them, you thanked them?",
+      "Thank you for trying to help. I've got it from here."
+    ]
+  ],
+  "closing": [
+    "You've just had a conversation with yourself. That's rare and valuable.",
+    "Most people never stop to listen to their own inner world.",
+    "You did. And whatever you heard, it matters.",
+    "Take a deep breath. All your voices are a little more at peace now.",
+    "Open your eyes. You know yourself a little better today."
+  ]
+}

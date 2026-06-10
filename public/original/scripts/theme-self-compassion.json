@@ -1,0 +1,61 @@
+{
+  "theme": "self-compassion",
+  "name": "Self-Compassion",
+  "voiceSettings": {
+    "rate": 0.80,
+    "pitch": 0.95
+  },
+  "intro": [
+    "Welcome. Today, the kindness is directed inward.",
+    "We're so good at caring for others. So practiced at putting ourselves last.",
+    "Right now, you are the one who gets the care.",
+    "Not because you earned it. Not because you deserve it more than yesterday.",
+    "But because you are a living being, and that is enough.",
+    "Breathe. And be gentle."
+  ],
+  "body": [
+    [
+      "Think of how you speak to yourself when you make a mistake.",
+      "The tone. The words. Would you use them on someone you love?",
+      "Most of us speak to ourselves in ways we'd never speak to a friend.",
+      "What if, starting now, you treated yourself like someone worth being kind to?",
+      "Because you are."
+    ],
+    [
+      "Place your hand over your heart.",
+      "Feel its beat. Steady. Faithful. Yours.",
+      "Say silently to yourself: I am doing my best.",
+      "Even if your best today looks different from your best yesterday.",
+      "It still counts. It always counts."
+    ],
+    [
+      "Think of something you've been criticizing yourself for.",
+      "Now imagine a child came to you with the same struggle.",
+      "What would you tell them? Would you call them stupid? Lazy? Worthless?",
+      "Or would you kneel down, look them in the eyes, and say: It's okay. You're learning.",
+      "Now say that to yourself. Mean it."
+    ],
+    [
+      "You are allowed to be imperfect.",
+      "Perfection was never the goal. It was the cage.",
+      "What if your cracks are not flaws but openings? Places where light gets in.",
+      "Every scar you carry is proof that you healed from something.",
+      "You are not broken. You are weathered. And weathered things have character."
+    ],
+    [
+      "Repeat these words in your mind, slowly.",
+      "May I be kind to myself.",
+      "May I accept myself as I am.",
+      "May I forgive myself for what I didn't know.",
+      "May I remember that I am enough.",
+      "Let those words settle. Not as wishes. As truths."
+    ]
+  ],
+  "closing": [
+    "Self-compassion is not selfish. It's the foundation of everything.",
+    "You can't pour from an empty cup. And you've been pouring for a long time.",
+    "Today, you refilled just a little. That matters.",
+    "Take a deep breath. You are worthy of your own kindness.",
+    "Open your eyes. And carry that warmth with you."
+  ]
+}

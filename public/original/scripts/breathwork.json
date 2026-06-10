@@ -1,0 +1,73 @@
+{
+  "style": "breathwork",
+  "name": "Breathwork",
+  "voiceSettings": {
+    "rate": 0.80,
+    "pitch": 0.95
+  },
+  "intro": [
+    "Welcome. Your breath is the one thing you always have.",
+    "It's your anchor. Your reset button. Your bridge between mind and body.",
+    "Right now, we're going to use it intentionally.",
+    "Find a comfortable position. Hands on your belly if that feels right.",
+    "We'll start simple. Just follow my voice.",
+    "Let's breathe together."
+  ],
+  "body": [
+    [
+      "Let's begin with a four-count breath.",
+      "Breathe in through your nose. Two. Three. Four.",
+      "Hold gently. Two. Three. Four.",
+      "Exhale through your mouth. Two. Three. Four.",
+      "Hold empty. Two. Three. Four.",
+      "Again. In. Two. Three. Four.",
+      "Hold. Two. Three. Four.",
+      "Out. Two. Three. Four.",
+      "Hold. Two. Three. Four.",
+      "Good. You're doing beautifully."
+    ],
+    [
+      "Now let's extend the exhale. This activates your calm.",
+      "Breathe in for four. Two. Three. Four.",
+      "And out for six. Two. Three. Four. Five. Six.",
+      "In for four. Two. Three. Four.",
+      "Out for six. Two. Three. Four. Five. Six.",
+      "The longer exhale tells your nervous system: you are safe.",
+      "Feel your heart rate begin to slow."
+    ],
+    [
+      "Now let's try a cleansing breath.",
+      "Inhale deeply through your nose. As deep as you can.",
+      "Hold it at the top. Feel the fullness.",
+      "Now exhale hard through your mouth. Let it all go. Everything.",
+      "Again. Deep inhale. Fill every corner of your lungs.",
+      "Hold. And release. A big, audible exhale.",
+      "One more. Breathe in all the calm you need.",
+      "And breathe out everything you don't."
+    ],
+    [
+      "Let's settle into a natural rhythm now.",
+      "No counting. No structure. Just your body breathing itself.",
+      "Notice the cool air entering your nostrils.",
+      "Notice the warm air leaving.",
+      "That's the cycle of life. In and out. Give and receive.",
+      "You are part of this rhythm. You always have been."
+    ],
+    [
+      "For these final breaths, imagine you're breathing in light.",
+      "A warm golden light that fills your chest.",
+      "And as you exhale, imagine releasing anything dark or heavy.",
+      "Light in. Weight out.",
+      "Light in. Doubt out.",
+      "Light in. Fear out.",
+      "You are lighter now. You are clearer now."
+    ]
+  ],
+  "closing": [
+    "Let your breathing return to its own natural pace.",
+    "You don't need to control it anymore. It knows what to do.",
+    "Notice how different you feel from when you started.",
+    "Your breath did that. It's always available to you.",
+    "Open your eyes when you're ready. You carry this calm with you."
+  ]
+}

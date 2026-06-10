@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kálma Studio</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a12; --bg2: #12121e; --bg3: #1a1a2a; --bg4: #1e1e35;
+      --text: #e8e4df; --dim: #8a8698; --accent: #6c63ff; --accent2: #8b83ff;
+      --border: rgba(255,255,255,0.08); --glow: rgba(108,99,255,0.15);
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; overflow-x: hidden; }
+
+    /* Header */
+    .header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; background: var(--bg2); }
+    .header h1 { font-size: 1rem; font-weight: 300; letter-spacing: 0.15em; color: var(--dim); }
+    .header a { color: var(--accent2); text-decoration: none; font-size: 0.8rem; }
+
+    /* Instrument selector */
+    .inst-bar { padding: 12px 24px; display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid var(--border); background: var(--bg2); }
+    .inst-btn {
+      padding: 6px 14px; border-radius: 16px; border: 1px solid var(--border);
+      background: transparent; color: var(--dim); font-size: 0.75rem; cursor: pointer; transition: all 0.2s;
+    }
+    .inst-btn:hover { border-color: var(--accent); color: var(--text); }
+    .inst-btn.active { background: var(--glow); border-color: var(--accent); color: var(--accent2); }
+
+    /* Preset selector */
+    .preset-bar { padding: 8px 24px; display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+    .preset-btn {
+      padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);
+      background: transparent; color: var(--dim); font-size: 0.65rem; cursor: pointer; transition: all 0.2s;
+    }
+    .preset-btn:hover { border-color: var(--accent); color: var(--accent2); }
+    .preset-btn.active { background: rgba(108,99,255,0.1); border-color: var(--accent); color: var(--accent2); }
+
+    /* Main area */
+    .main { display: flex; flex: 1; height: calc(100vh - 140px); }
+
+    /* Params panel */
+    .params { width: 280px; padding: 16px; overflow-y: auto; border-right: 1px solid var(--border); background: var(--bg2); }
+    .params h3 { font-size: 0.7rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+    .param-group { margin-bottom: 16px; }
+    .param-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .param-row label { font-size: 0.7rem; color: var(--dim); min-width: 90px; }
+    .param-row input[type="range"] {
+      flex: 1; -webkit-appearance: none; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; outline: none;
+    }
+    .param-row input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); cursor: pointer;
+    }
+    .param-row .val { font-size: 0.6rem; color: var(--dim); min-width: 35px; text-align: right; }
+    .param-row select {
+      flex: 1; background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+      padding: 3px 6px; border-radius: 6px; font-size: 0.7rem; outline: none;
+    }
+
+    /* Keyboard */
+    .keyboard-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+    .keyboard-label { font-size: 0.65rem; color: var(--dim); margin-bottom: 12px; letter-spacing: 0.1em; text-transform: uppercase; }
+    .keyboard { display: flex; position: relative; height: 160px; }
+    .key {
+      width: 36px; height: 140px; border: 1px solid rgba(255,255,255,0.1); border-radius: 0 0 6px 6px;
+      background: linear-gradient(180deg, #1a1a2e, #12121e); cursor: pointer; position: relative; z-index: 1;
+      display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px;
+      font-size: 0.5rem; color: var(--dim); transition: background 0.1s;
+      user-select: none; -webkit-user-select: none;
+    }
+    .key:active, .key.pressed { background: linear-gradient(180deg, var(--accent), #3a35a0); color: white; }
+    .key.black {
+      width: 24px; height: 90px; background: #0a0a12; border-color: #222;
+      margin-left: -12px; margin-right: -12px; z-index: 2;
+    }
+    .key.black:active, .key.black.pressed { background: var(--accent); }
+
+    /* Status */
+    .status { padding: 8px 24px; font-size: 0.65rem; color: var(--dim); border-top: 1px solid var(--border); background: var(--bg2); }
+
+    @media (max-width: 700px) {
+      .main { flex-direction: column; }
+      .params { width: 100%; max-height: 200px; border-right: none; border-bottom: 1px solid var(--border); }
+      .key { width: 28px; height: 110px; }
+      .key.black { width: 18px; height: 70px; margin-left: -9px; margin-right: -9px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Kálma Studio</h1>
+    <a href="index.html">← Hub</a>
+  </div>
+
+  <div class="inst-bar" id="inst-bar"></div>
+  <div class="preset-bar" id="preset-bar"></div>
+
+  <div class="main">
+    <div class="params" id="params-panel">
+      <h3>Parameters</h3>
+      <div id="params-content">Select an instrument to begin</div>
+    </div>
+    <div class="keyboard-area">
+      <div class="keyboard-label">Play with mouse, touch, or keyboard (A-L = notes) · Z/X = octave down/up · <span id="octave-display" style="color: var(--accent2);">Octave: 3</span></div>
+      <div class="keyboard" id="keyboard"></div>
+    </div>
+  </div>
+
+  <div class="status" id="status">Ready — select an instrument above</div>
+
+  <script src="instruments/va-synth.js"></script>
+  <script src="instruments/fm-synth.js"></script>
+  <script src="instruments/wavetable-synth.js"></script>
+  <script src="instruments/granular-engine.js"></script>
+  <script src="instruments/physical-model.js"></script>
+
+  <script>
+    let ctx = null;
+    let instrument = null;
+    let currentInst = null;
+    const heldNotes = new Set();
+
+    const INSTRUMENTS = {
+      'VA Synth': { cls: VASynth, presets: VASynth.PRESETS },
+      'FM Synth': { cls: FMSynth, presets: FMSynth.PRESETS },
+      'Wavetable': { cls: WavetableSynth, presets: WavetableSynth.PRESETS },
+      'Granular': { cls: GranularEngine, presets: GranularEngine.PRESETS, isGranular: true },
+      // Physical removed — feedback issues
+      // 'Physical': { cls: PhysicalModel, presets: PhysicalModel.PRESETS }
+    };
+
+    // Build instrument buttons
+    const instBar = document.getElementById('inst-bar');
+    Object.keys(INSTRUMENTS).forEach(name => {
+      const btn = document.createElement('button');
+      btn.className = 'inst-btn';
+      btn.textContent = name;
+      btn.onclick = () => selectInstrument(name);
+      instBar.appendChild(btn);
+    });
+
+    function ensureCtx() {
+      if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
+      return ctx;
+    }
+
+    function selectInstrument(name) {
+      ensureCtx();
+      if (instrument) instrument.destroy();
+
+      const info = INSTRUMENTS[name];
+      currentInst = name;
+
+      if (info.isGranular) {
+        instrument = new info.cls(ctx, ctx.destination);
+        instrument._generateNoiseBuffer();
+        instrument.start();
+      } else {
+        instrument = new info.cls(ctx, ctx.destination);
+      }
+
+      // Update UI
+      document.querySelectorAll('.inst-btn').forEach(b => b.classList.toggle('active', b.textContent === name));
+      buildPresetBar(info.presets);
+      buildParams();
+      document.getElementById('status').textContent = `${name} loaded — play!`;
+    }
+
+    function buildPresetBar(presets) {
+      const bar = document.getElementById('preset-bar');
+      bar.innerHTML = '';
+      Object.keys(presets).forEach(name => {
+        const btn = document.createElement('button');
+        btn.className = 'preset-btn';
+        btn.textContent = name;
+        btn.onclick = () => {
+          instrument.loadPreset(name);
+          document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          buildParams();
+          document.getElementById('status').textContent = `Preset: ${name}`;
+        };
+        bar.appendChild(btn);
+      });
+    }
+
+    function buildParams() {
+      if (!instrument || !instrument.params) { document.getElementById('params-content').innerHTML = ''; return; }
+      const container = document.getElementById('params-content');
+      container.innerHTML = '';
+
+      const p = instrument.params;
+      Object.entries(p).forEach(([key, val]) => {
+        const row = document.createElement('div');
+        row.className = 'param-row';
+
+        const label = document.createElement('label');
+        label.textContent = key.replace(/([A-Z])/g, ' $1').trim();
+
+        if (typeof val === 'number') {
+          const range = document.createElement('input');
+          range.type = 'range';
+          range.min = key.includes('Gain') || key.includes('sustain') || key.includes('Mix') || key.includes('Depth') || key.includes('Spread') || key.includes('reverb') || key === 'morphPosition' || key === 'damping' || key === 'brightness' || key === 'bodyResonance' ? 0 : key.includes('Freq') ? 50 : key.includes('Rate') || key.includes('lfo') ? 0 : 0;
+          range.max = key.includes('Gain') || key.includes('sustain') || key.includes('Mix') || key.includes('Depth') || key.includes('Spread') || key.includes('reverb') || key === 'morphPosition' || key === 'damping' || key === 'brightness' || key === 'bodyResonance' ? 1 : key.includes('Freq') ? 10000 : key.includes('Index') ? 1000 : key.includes('density') ? 60 : key.includes('Count') ? 5 : key.includes('Octave') ? 1 : key.includes('Detune') || key.includes('unisonSpread') ? 50 : key.includes('Q') ? 10 : key.includes('Ratio') ? 10 : key.includes('Rate') || key.includes('lfo') ? 10 : key.includes('pitch') ? 4 : 10;
+          range.step = typeof val === 'number' && val < 1 ? 0.01 : key.includes('Count') ? 1 : 0.01;
+          range.value = val;
+          const valSpan = document.createElement('span');
+          valSpan.className = 'val';
+          valSpan.textContent = typeof val === 'number' ? val.toFixed(2) : val;
+          range.oninput = () => {
+            const v = parseFloat(range.value);
+            instrument.setParam(key, v);
+            valSpan.textContent = v.toFixed(2);
+          };
+          row.appendChild(label);
+          row.appendChild(range);
+          row.appendChild(valSpan);
+        } else if (typeof val === 'string') {
+          const select = document.createElement('select');
+          const options = key.includes('Type') || key === 'carrierType'
+            ? ['sine', 'triangle', 'sawtooth', 'square']
+            : key === 'filterType'
+            ? ['lowpass', 'highpass', 'bandpass']
+            : key === 'model'
+            ? ['pluck', 'bow', 'bell', 'marimba']
+            : key.includes('table') || key.includes('Table')
+            ? ['warm', 'bright', 'hollow', 'glass', 'choir', 'ethereal', 'dark', 'metallic']
+            : [val];
+          options.forEach(o => {
+            const opt = document.createElement('option');
+            opt.value = o; opt.textContent = o; if (o === val) opt.selected = true;
+            select.appendChild(opt);
+          });
+          select.onchange = () => instrument.setParam(key, select.value);
+          row.appendChild(label);
+          row.appendChild(select);
+        } else return;
+
+        container.appendChild(row);
+      });
+    }
+
+    // Build keyboard (2 octaves, dynamic base)
+    const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    const keyboard = document.getElementById('keyboard');
+    let baseOctave = 3; // C3 = MIDI 48
+
+    function getBaseNote() { return baseOctave * 12; }
+
+    function buildKeyboard() {
+      // Stop all held notes before rebuilding
+      heldNotes.forEach(n => { if (instrument && instrument.noteOff) instrument.noteOff(n); });
+      heldNotes.clear();
+      keyboard.innerHTML = '';
+      const base = getBaseNote();
+
+      for (let i = 0; i < 25; i++) {
+        const note = base + i;
+        const noteName = NOTES[i % 12];
+        const isBlack = noteName.includes('#');
+        const key = document.createElement('div');
+        key.className = 'key' + (isBlack ? ' black' : '');
+        key.dataset.note = note;
+        if (!isBlack) key.textContent = noteName + (baseOctave + Math.floor(i / 12));
+
+        const down = (e) => { e.preventDefault(); playNote(note); key.classList.add('pressed'); };
+        const up = () => { stopNote(note); key.classList.remove('pressed'); };
+        key.addEventListener('mousedown', down);
+        key.addEventListener('mouseup', up);
+        key.addEventListener('mouseleave', up);
+        key.addEventListener('touchstart', down, { passive: false });
+        key.addEventListener('touchend', up);
+
+        keyboard.appendChild(key);
+      }
+      document.getElementById('octave-display').textContent = 'Octave: ' + baseOctave;
+    }
+
+    buildKeyboard();
+
+    function playNote(note) {
+      if (!instrument || heldNotes.has(note)) return;
+      heldNotes.add(note);
+      if (instrument.noteOn) instrument.noteOn(note, 0.7);
+    }
+
+    function stopNote(note) {
+      if (!instrument || !heldNotes.has(note)) return;
+      heldNotes.delete(note);
+      if (instrument.noteOff) instrument.noteOff(note);
+    }
+
+    // Computer keyboard mapping (offsets from baseNote)
+    const KEY_OFFSETS = { 'a': 0, 'w': 1, 's': 2, 'e': 3, 'd': 4, 'f': 5, 't': 6, 'g': 7, 'y': 8, 'h': 9, 'u': 10, 'j': 11, 'k': 12, 'o': 13, 'l': 14 };
+
+    document.addEventListener('keydown', e => {
+      if (e.repeat) return;
+      const k = e.key.toLowerCase();
+
+      // Octave shift: Z = down, X = up
+      if (k === 'z') {
+        if (baseOctave > 0) { baseOctave--; buildKeyboard(); }
+        return;
+      }
+      if (k === 'x') {
+        if (baseOctave < 7) { baseOctave++; buildKeyboard(); }
+        return;
+      }
+
+      const offset = KEY_OFFSETS[k];
+      if (offset !== undefined) {
+        const note = getBaseNote() + offset;
+        playNote(note);
+        const el = keyboard.querySelector(`[data-note="${note}"]`);
+        if (el) el.classList.add('pressed');
+      }
+    });
+    document.addEventListener('keyup', e => {
+      const k = e.key.toLowerCase();
+      const offset = KEY_OFFSETS[k];
+      if (offset !== undefined) {
+        const note = getBaseNote() + offset;
+        stopNote(note);
+        const el = keyboard.querySelector(`[data-note="${note}"]`);
+        if (el) el.classList.remove('pressed');
+      }
+    });
+  </script>
+</body>
+</html>

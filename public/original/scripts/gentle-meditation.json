@@ -1,0 +1,61 @@
+{
+  "style": "gentle",
+  "name": "Gentle Meditation",
+  "voiceSettings": {
+    "rate": 0.82,
+    "pitch": 0.95
+  },
+  "intro": [
+    "Welcome. You've chosen to be here, and that matters.",
+    "Let your eyes close softly, or simply lower your gaze.",
+    "There is nothing to fix right now. Nothing to solve.",
+    "Just breathe. In through your nose... and out through your mouth.",
+    "Let each breath be a little slower than the last.",
+    "You are exactly where you need to be."
+  ],
+  "body": [
+    [
+      "Bring your attention to the weight of your body.",
+      "Feel the places where you're supported. The ground beneath you. The surface holding you.",
+      "You don't have to hold yourself up right now. Let gravity do the work.",
+      "If thoughts come, let them pass like clouds. You don't need to follow them.",
+      "Just notice them... and return to your breath."
+    ],
+    [
+      "Now gently scan your body from the top of your head downward.",
+      "Notice your forehead. Your jaw. Are you holding tension there?",
+      "If so, just notice it. No judgment. Simply soften.",
+      "Let your shoulders drop. Let your hands relax.",
+      "Each exhale is permission to release a little more."
+    ],
+    [
+      "Imagine a warm, soft light resting just above your head.",
+      "With each breath, it slowly moves downward through your body.",
+      "It touches your face and your expression softens.",
+      "It moves through your chest, your arms, your hands.",
+      "Wherever it goes, tension dissolves into warmth."
+    ],
+    [
+      "Now let your awareness settle on your heartbeat.",
+      "You don't need to find it. Just know it's there. Steady. Faithful.",
+      "It has been beating for you since before you were born.",
+      "Without asking anything in return.",
+      "Take a moment to feel gratitude for that quiet rhythm."
+    ],
+    [
+      "In this stillness, there is nothing missing.",
+      "You are whole. You are safe. You are enough.",
+      "Let yourself rest in this knowing.",
+      "There's nowhere else to be. Nothing else to do.",
+      "Just this moment. Just this breath. Just you."
+    ]
+  ],
+  "closing": [
+    "Gently now, begin to deepen your breath.",
+    "Feel the room around you. The sounds. The air on your skin.",
+    "There's no rush. Take your time coming back.",
+    "Wiggle your fingers. Your toes. A small movement to reconnect.",
+    "When you're ready, open your eyes softly.",
+    "Carry this stillness with you. It's always here when you need it."
+  ]
+}

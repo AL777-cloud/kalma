@@ -1,0 +1,60 @@
+{
+  "theme": "calm-reflection",
+  "name": "Calm Reflection",
+  "voiceSettings": {
+    "rate": 0.78,
+    "pitch": 0.93
+  },
+  "intro": [
+    "Welcome to a space of quiet observation.",
+    "There's nothing to achieve here. No destination to reach.",
+    "Just you, watching the landscape of your inner world.",
+    "Let your breathing slow until it barely makes a sound.",
+    "Like the surface of still water, let your mind settle.",
+    "Observe. That's all."
+  ],
+  "body": [
+    [
+      "Picture yourself sitting at the edge of a calm lake.",
+      "The water is perfectly still. It reflects everything above it without effort.",
+      "Your mind can be like this water.",
+      "Thoughts will come like ripples. A memory. A worry. A plan.",
+      "Watch each one arrive, spread, and dissolve back into stillness."
+    ],
+    [
+      "What is the quality of this moment?",
+      "Not good or bad. Just... what is it? What texture does it have?",
+      "Is it heavy or light? Warm or cool? Open or tight?",
+      "You don't need to change it. Just name it softly to yourself.",
+      "Naming something is the first act of understanding."
+    ],
+    [
+      "Let your awareness float backward through today.",
+      "Not searching for anything. Just drifting.",
+      "What moments stand out? Not the biggest ones. The quiet ones.",
+      "A breath you took. A face you saw. A sound that caught your ear.",
+      "These small moments are the real fabric of your life."
+    ],
+    [
+      "Now let your awareness rest on nothing at all.",
+      "Not your thoughts. Not your body. Not even your breath.",
+      "Just the space behind everything. The silence underneath the sound.",
+      "This emptiness isn't lonely. It's vast. It's peaceful.",
+      "You can always return here. It's never gone."
+    ],
+    [
+      "Before we close, ask yourself one quiet question.",
+      "What do I need right now? Not what I should need. What I actually need.",
+      "Listen for the answer. It might come as a word. A feeling. An image.",
+      "Whatever arrives, accept it without judgment.",
+      "You've just listened to the wisest part of yourself."
+    ]
+  ],
+  "closing": [
+    "The stillness you found here doesn't leave when you open your eyes.",
+    "It lives underneath everything. Always accessible.",
+    "Take one last breath in this quiet place.",
+    "And gently, softly, return to the world.",
+    "You carry the calm with you now."
+  ]
+}

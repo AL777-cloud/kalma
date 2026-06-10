@@ -1,0 +1,60 @@
+{
+  "theme": "cognitive-reframing",
+  "name": "Shift Perspective",
+  "voiceSettings": {
+    "rate": 0.82,
+    "pitch": 0.95
+  },
+  "intro": [
+    "Welcome. Today we're going to look at something familiar from an unfamiliar angle.",
+    "Our minds are pattern machines. They build stories quickly and believe them deeply.",
+    "But patterns can be rewritten. Perspectives can shift.",
+    "Take a slow breath. Let go of the need to be right.",
+    "Instead, be curious.",
+    "Let's explore."
+  ],
+  "body": [
+    [
+      "Bring to mind a situation that's been difficult.",
+      "One that your mind keeps replaying. One that feels stuck.",
+      "Notice the story you've built around it. The meaning you've assigned.",
+      "Now, just for a moment, imagine removing all interpretation. Just the raw facts.",
+      "What happened, stripped of the story? What's actually left?"
+    ],
+    [
+      "Your mind probably added a why. A reason. A motive.",
+      "What if that why is only one possibility among many?",
+      "What if the other person was afraid, not cruel? Careless, not intentional?",
+      "This isn't about excusing anything. It's about freeing yourself from a single narrative.",
+      "Multiple truths can exist at once."
+    ],
+    [
+      "Now think about what you've been telling yourself about your role in this.",
+      "Are you the villain in your own story? The helpless one? The one who always fails?",
+      "What if you're none of those? What if you're just someone doing their best with what they had?",
+      "Rewrite the character description. Be kinder to yourself.",
+      "You are not your worst interpretation of yourself."
+    ],
+    [
+      "Consider the idea that this difficult thing might be a chapter, not the whole book.",
+      "What if future you looks back on this and sees it as a turning point?",
+      "Not because it was good. But because of what you built from it.",
+      "You can't see the full picture from inside the frame.",
+      "Trust that the story isn't finished."
+    ],
+    [
+      "Let's build a new sentence about this situation.",
+      "Start with: This is hard, and...",
+      "Not but. And. Both things can be true.",
+      "This is hard, and I am learning. This is painful, and I am growing.",
+      "Hold both. That's not denial. That's wisdom."
+    ]
+  ],
+  "closing": [
+    "You don't have to adopt a new belief today.",
+    "Just knowing there are other angles is enough.",
+    "The mind that can question its own stories is a free mind.",
+    "Take a deep breath. You've loosened something today.",
+    "Open your eyes. The world looks a little different from here."
+  ]
+}

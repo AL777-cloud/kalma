@@ -1,0 +1,60 @@
+{
+  "theme": "letting-go",
+  "name": "Letting Go",
+  "voiceSettings": {
+    "rate": 0.78,
+    "pitch": 0.92
+  },
+  "intro": [
+    "Welcome. Today is about release.",
+    "We hold on to so much. Grudges. Regrets. Expectations. Old versions of ourselves.",
+    "Letting go isn't giving up. It's making room.",
+    "Room for something lighter. Something truer.",
+    "Take a deep breath in. And as you exhale, imagine your hands slowly opening.",
+    "Let's begin to loosen what no longer serves you."
+  ],
+  "body": [
+    [
+      "Think of something you've been gripping tightly.",
+      "A resentment. A memory you keep replaying. A version of events you insist on.",
+      "Feel how much energy it takes to hold it.",
+      "Your hand is clenched around it. Your jaw is tight. Your shoulders are lifted.",
+      "What if you loosened your grip? Not all the way. Just a fraction."
+    ],
+    [
+      "Letting go doesn't mean it didn't matter.",
+      "It doesn't mean it was okay. It doesn't mean you've forgotten.",
+      "It means you've decided that carrying it is costing more than keeping it.",
+      "You can honor what happened and still set it down.",
+      "Breathe out. Feel the weight shift."
+    ],
+    [
+      "Think of a person you need to release. Someone whose actions still live in you.",
+      "Not to forgive them. Not yet, if you're not ready. That's okay.",
+      "Just to untangle their story from yours.",
+      "Their choices were theirs. Your life is yours.",
+      "You don't have to carry what they put down long ago."
+    ],
+    [
+      "Now think of an old version of yourself you've been mourning.",
+      "The person you were before. Before the loss. Before the change.",
+      "That person did their best. And they brought you here.",
+      "But you are not them anymore. And pretending you are keeps you stuck.",
+      "Thank them. Honor them. And let them rest."
+    ],
+    [
+      "Imagine standing by a river. In your hands you hold stones.",
+      "Each stone is labeled. One says control. One says perfection. One says fear.",
+      "One by one, place them in the water.",
+      "Watch them sink. Watch the river carry on, undisturbed.",
+      "Your hands are lighter. Your breath is deeper. Something has shifted."
+    ]
+  ],
+  "closing": [
+    "Letting go is not a single act. It's a practice.",
+    "Some things you'll need to release more than once. That's normal.",
+    "But today, you loosened something. You made space.",
+    "That space will fill with something better. Trust that.",
+    "Open your eyes. You are lighter than you were before."
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "style": "motivational",
+  "name": "Motivational",
+  "voiceSettings": {
+    "rate": 0.88,
+    "pitch": 1.0
+  },
+  "intro": [
+    "You showed up. That's the first victory.",
+    "Whatever brought you here today, whether it was hard or heavy, you chose yourself. And that takes strength.",
+    "Take a deep breath in. Fill your lungs completely.",
+    "And release. Let it all go.",
+    "Right now, in this moment, you are choosing to grow.",
+    "And that is powerful."
+  ],
+  "body": [
+    [
+      "Think about everything you've already survived.",
+      "Every hard day. Every sleepless night. Every moment you thought you couldn't keep going.",
+      "And yet here you are. Still standing. Still breathing. Still fighting.",
+      "You are more resilient than you give yourself credit for.",
+      "Breathe that in. You are strong."
+    ],
+    [
+      "Now imagine the version of yourself you're becoming.",
+      "Not perfect. Not finished. But growing. Evolving.",
+      "See that person clearly. How they move. How they speak. How they carry themselves.",
+      "That person isn't far away. They're already inside you.",
+      "Every small step you take brings them closer to the surface."
+    ],
+    [
+      "Fear is not a wall. It's a doorway.",
+      "The things that scare you the most are often the things that matter the most.",
+      "You don't have to be fearless. You just have to be willing.",
+      "Willing to try. Willing to fail. Willing to try again.",
+      "Courage isn't the absence of fear. It's moving forward with it."
+    ],
+    [
+      "You are not defined by your worst moments.",
+      "You are defined by how you rise after them.",
+      "Think of one thing you're proud of. It doesn't have to be big.",
+      "Maybe you were kind when it was hard to be. Maybe you kept a promise to yourself.",
+      "Hold that. That's evidence of who you really are."
+    ],
+    [
+      "The world needs what only you can offer.",
+      "Your voice. Your perspective. Your unique way of seeing things.",
+      "No one else has lived your story. No one else can tell it.",
+      "You are not too much. You are not too little. You are exactly right.",
+      "Breathe deeply and know this: you've got this."
+    ]
+  ],
+  "closing": [
+    "As you come back to the room, carry this energy with you.",
+    "You are capable. You are worthy. You are already on your way.",
+    "Take one more deep breath. Feel your power.",
+    "Slowly open your eyes. The world is waiting for you.",
+    "Go gently, but go boldly. You've got this."
+  ]
+}

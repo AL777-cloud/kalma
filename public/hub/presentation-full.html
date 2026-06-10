@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kálma — Full Presentation</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #08080f; --bg2: #0e0e1a; --bg3: #151525;
+      --text: #e8e4df; --dim: #7a7690; --accent: #b48eff; --accent2: #8b6fc0;
+      --green: #4ade80; --blue: #38bdf8; --amber: #f59e0b; --pink: #f472b6;
+      --cyan: #22d3ee;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; overflow: hidden; }
+    .deck { width: 100%; height: 100%; position: relative; }
+    .slide {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      padding: 48px 72px; overflow-y: auto;
+      opacity: 0; pointer-events: none; transition: opacity 0.6s ease;
+    }
+    .slide.active { opacity: 1; pointer-events: auto; }
+
+    h1 { font-size: 3.5rem; font-weight: 300; letter-spacing: 0.05em; margin-bottom: 16px; text-align: center; }
+    h2 { font-size: 1.9rem; font-weight: 300; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 28px; text-align: center; }
+    h3 { font-size: 1.15rem; font-weight: 500; color: var(--accent); margin-bottom: 10px; letter-spacing: 0.02em; }
+    h4 { font-size: 0.95rem; font-weight: 400; color: var(--text); margin-bottom: 4px; }
+    p, li { font-size: 0.95rem; line-height: 1.65; color: var(--dim); }
+    p strong, li strong { color: var(--text); font-weight: 500; }
+    .subtitle { font-size: 1.2rem; color: var(--dim); font-weight: 300; text-align: center; margin-bottom: 8px; }
+    .big-text { font-size: 1.6rem; color: var(--text); font-weight: 300; line-height: 1.5; text-align: center; max-width: 800px; }
+    .mid-text { font-size: 1.1rem; color: var(--text); font-weight: 300; line-height: 1.6; text-align: center; max-width: 750px; }
+    .highlight { color: var(--accent); }
+    .green { color: var(--green); }
+    .note { font-size: 0.8rem; color: var(--dim); text-align: center; margin-top: 16px; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; width: 100%; max-width: 950px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; width: 100%; max-width: 950px; }
+    .col { display: flex; flex-direction: column; gap: 10px; }
+    .full-width { width: 100%; max-width: 900px; }
+    .center-content { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+
+    ul { list-style: none; padding: 0; }
+    ul li { padding: 5px 0; padding-left: 18px; position: relative; font-size: 0.92rem; }
+    ul li::before { content: ''; position: absolute; left: 0; top: 13px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); opacity: 0.5; }
+
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; width: 100%; max-width: 950px; }
+    .card {
+      background: var(--bg3); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;
+      padding: 18px; text-align: center;
+    }
+    .card h4 { font-size: 0.85rem; margin-bottom: 5px; }
+    .card p { font-size: 0.78rem; }
+    .card .icon { font-size: 1.5rem; margin-bottom: 6px; display: block; }
+    .card.accent-border { border-color: rgba(180,142,255,0.25); }
+    .card.green-border { border-color: rgba(74,222,128,0.25); }
+
+    .stat-row { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+    .stat {
+      background: var(--bg3); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;
+      padding: 20px 28px; text-align: center; min-width: 160px;
+    }
+    .stat .number { font-size: 2rem; font-weight: 300; color: var(--green); }
+    .stat .label { font-size: 0.78rem; color: var(--dim); margin-top: 4px; }
+
+    .pill-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 12px 0; }
+    .pill {
+      padding: 6px 16px; border-radius: 20px;
+      background: rgba(180,142,255,0.1); border: 1px solid rgba(180,142,255,0.2);
+      font-size: 0.82rem; color: var(--accent);
+    }
+
+    .simple-table { width: 100%; max-width: 850px; border-collapse: collapse; margin-top: 10px; }
+    .simple-table th { text-align: left; font-size: 0.72rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; padding: 7px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); font-weight: 400; }
+    .simple-table td { padding: 8px 12px; font-size: 0.85rem; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--dim); }
+    .simple-table td:first-child { color: var(--text); }
+
+    .vision-box {
+      background: linear-gradient(135deg, rgba(180,142,255,0.08), rgba(74,222,128,0.04));
+      border: 1px solid rgba(180,142,255,0.2); border-radius: 16px;
+      padding: 28px 36px; max-width: 800px; text-align: center;
+    }
+    .vision-box p { font-size: 1.1rem; color: var(--text); line-height: 1.7; font-weight: 300; }
+
+    .info-box {
+      background: var(--bg3); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;
+      padding: 20px 28px; max-width: 800px; width: 100%;
+    }
+    .info-box p { font-size: 0.88rem; }
+
+    .orb-container { position: relative; width: 260px; height: 260px; margin: 12px auto; }
+    .orb {
+      width: 260px; height: 260px;
+      animation: orb-breathe 4s ease-in-out infinite;
+    }
+    .orb img { width: 100%; height: 100%; }
+    @keyframes orb-breathe {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50% { transform: scale(1.06); opacity: 1; }
+    }
+
+    .flow { display: flex; align-items: center; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 14px 0; }
+    .flow-item {
+      padding: 8px 16px; border-radius: 10px;
+      background: var(--bg3); border: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.85rem; color: var(--text);
+    }
+    .flow-arrow { color: var(--accent); font-size: 1.1rem; }
+
+    .divider { width: 60px; height: 1px; background: rgba(180,142,255,0.2); margin: 20px auto; }
+
+    .nav {
+      position: fixed; bottom: 20px; right: 28px; z-index: 100;
+      display: flex; gap: 8px; align-items: center;
+    }
+    .nav button {
+      width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(14,14,26,0.9); color: var(--dim); cursor: pointer;
+      font-size: 0.95rem; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; backdrop-filter: blur(8px);
+    }
+    .nav button:hover { border-color: var(--accent); color: var(--accent); }
+    .nav .counter { font-size: 0.72rem; color: var(--dim); min-width: 55px; text-align: center; }
+    .progress { position: fixed; top: 0; left: 0; height: 2px; background: var(--accent); transition: width 0.4s ease; z-index: 100; }
+
+    @media (max-width: 768px) {
+      .slide { padding: 24px 20px; }
+      h1 { font-size: 2rem; }
+      h2 { font-size: 1.3rem; }
+      .two-col, .three-col { grid-template-columns: 1fr; gap: 20px; }
+      .big-text { font-size: 1.2rem; }
+      .stat .number { font-size: 1.5rem; }
+      .card-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+  <!-- 1: Title -->
+  <div class="slide active" data-slide="0">
+    <div class="orb-container"><div class="orb"><img src="./brand/kalma-orb.svg" alt="Kálma"></div></div>
+    <h1>Kálma</h1>
+    <p class="subtitle">Living music that adapts to you</p>
+    <p style="color: var(--dim); font-size: 0.85rem; margin-top: 32px;">Full Presentation · May 2026</p>
+  </div>
+
+  <!-- 2: What is Kálma -->
+  <div class="slide" data-slide="1">
+    <h2>What is Kálma?</h2>
+    <p class="big-text">
+      Kálma creates <strong class="highlight">music that's alive</strong>. Every sound is generated in real-time — no recordings, no loops, no playlists.
+    </p>
+    <p class="mid-text" style="margin-top: 16px;">
+      The music is born fresh every time you open it, and it <strong>never plays the same thing twice.</strong>
+    </p>
+    <div class="flow" style="margin-top: 28px;">
+      <span class="flow-item">No app store</span>
+      <span class="flow-arrow">·</span>
+      <span class="flow-item">Runs in your browser</span>
+      <span class="flow-arrow">·</span>
+      <span class="flow-item">Works on your phone</span>
+    </div>
+  </div>
+
+  <!-- 3: Kálma Hub -->
+  <div class="slide" data-slide="2">
+    <h2>Kálma Hub</h2>
+    <p class="subtitle" style="margin-bottom: 28px;">The home base — everything lives here</p>
+    <div class="card-grid" style="max-width: 850px;">
+      <div class="card accent-border">
+        <span class="icon">🎵</span>
+        <h4>Kálma Player</h4>
+        <p>Adaptive music for everyone. Daily use.</p>
+      </div>
+      <div class="card accent-border">
+        <span class="icon">🧘</span>
+        <h4>Kálma Wellness</h4>
+        <p>Therapeutic sound for mind &amp; body</p>
+      </div>
+      <div class="card">
+        <span class="icon">🎹</span>
+        <h4>Studio</h4>
+        <p>5 custom instruments to play with</p>
+      </div>
+      <div class="card">
+        <span class="icon">📐</span>
+        <h4>Architecture</h4>
+        <p>Full technical docs &amp; diagrams</p>
+      </div>
+      <div class="card">
+        <span class="icon">📂</span>
+        <h4>Asset Library</h4>
+        <p>All sounds &amp; files, filterable</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4: Player intro -->
+  <div class="slide" data-slide="3">
+    <h2>Kálma Player</h2>
+    <p class="big-text">Music that changes with your world</p>
+    <div class="divider"></div>
+    <p class="mid-text">Opens → senses your environment → starts playing</p>
+    <div class="flow" style="margin-top: 24px;">
+      <span class="flow-item">Time of day</span>
+      <span class="flow-arrow">·</span>
+      <span class="flow-item">Weather</span>
+      <span class="flow-arrow">·</span>
+      <span class="flow-item">Season</span>
+      <span class="flow-arrow">·</span>
+      <span class="flow-item">Movement</span>
+    </div>
+    <p class="note">The music gently shifts as your world changes — no sudden jumps, just slow natural transformation</p>
+  </div>
+
+  <!-- 5: How Player adapts -->
+  <div class="slide" data-slide="4">
+    <h2>How It Adapts</h2>
+    <div class="two-col">
+      <div class="col">
+        <h3>It senses your world</h3>
+        <ul>
+          <li>Knows if it's <strong>morning, afternoon, or late night</strong></li>
+          <li>Reads the <strong>weather and temperature</strong> where you are</li>
+          <li>Detects <strong>what season</strong> it is</li>
+          <li>Knows if you're <strong>still, walking, or active</strong></li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>It responds</h3>
+        <ul>
+          <li>Rainy evening → darker, deeper, more reverb</li>
+          <li>Bright morning → warmer, more open</li>
+          <li>Moving around → subtle energy shift</li>
+          <li>All changes are <strong>slow drifts</strong>, never abrupt</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6: What you hear -->
+  <div class="slide" data-slide="5">
+    <h2>What You Hear</h2>
+    <div class="card-grid" style="max-width: 850px;">
+      <div class="card">
+        <h4>Introspective Soundscapes</h4>
+        <p>Warm, reflective drone bed in stereo (±0.35 pan)</p>
+      </div>
+      <div class="card">
+        <h4>Generative Piano</h4>
+        <p>Debussy-inspired, chord-aware (65% chord tones), calm 45–60 BPM</p>
+      </div>
+      <div class="card">
+        <h4>Movement-Reactive Sound</h4>
+        <p>Walk → warm pads fade in. With Adaptive Beats enabled, dreamy beats join. Stop → they dissolve</p>
+      </div>
+      <div class="card">
+        <h4>Studio-Grade Audio</h4>
+        <p>Compressor, warmth + air EQ, 4.5s stereo reverb</p>
+      </div>
+      <div class="card">
+        <h4>Adaptive Beats</h4>
+        <p>4 types: Upbeat, Grounded, Dreamy, Energetic. Off by default</p>
+      </div>
+      <div class="card">
+        <h4>AI Mood Shaping</h4>
+        <p>Type anything → LLM + Music Brain reshape the sound</p>
+      </div>
+    </div>
+    <p class="note">Sacred geometry visualizer · Mood-driven color palettes · Like/dislike learning</p>
+  </div>
+
+  <!-- 7: Smart features -->
+  <div class="slide" data-slide="6">
+    <h2>Smart Features</h2>
+    <div class="three-col">
+      <div class="info-box" style="max-width: none;">
+        <h3>AI Mood Understanding</h3>
+        <p>Type how you feel — <strong>"floating in space"</strong>, <strong>"rainy afternoon"</strong> — and the music reshapes itself using AI</p>
+      </div>
+      <div class="info-box" style="max-width: none;">
+        <h3>It Learns From You</h3>
+        <p>Like/dislike teaches it your taste. Over time, it <strong>remembers what you prefer</strong> and adjusts</p>
+      </div>
+      <div class="info-box" style="max-width: none;">
+        <h3>Always Works</h3>
+        <p>If AI isn't available, <strong>200+ built-in emotion patterns</strong> take over instantly — seamless fallback</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8: Player updates -->
+  <div class="slide" data-slide="7">
+    <h2>Latest Updates — Player</h2>
+    <div class="full-width">
+      <ul>
+        <li><strong>Piano engine</strong> — slow, floating generative piano activates on mood shift (Debussy/Einaudi-inspired)</li>
+        <li><strong>First Impression sensing</strong> — 30s sequence narrates what the app detects, music responds live</li>
+        <li><strong>Gyroscope shimmer</strong> — tilt your phone and hear the sound respond instantly</li>
+        <li><strong>Music drifts smoothly</strong> — gentle morphing, never abrupt changes</li>
+        <li><strong>Warm introspective character</strong> as the default feel</li>
+        <li><strong>Voice mood input</strong> — speak how you feel, speech-to-text drives the music</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 9: Wellness intro -->
+  <div class="slide" data-slide="8">
+    <h2>Kálma Wellness</h2>
+    <p class="big-text">Therapeutic sound for your mind and body</p>
+    <div class="divider"></div>
+    <div class="flow">
+      <span class="flow-item">Choose what you need</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">It sets everything up</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">Shift mood anytime</span>
+    </div>
+    <div class="pill-row" style="margin-top: 24px;">
+      <span class="pill">Meditate</span>
+      <span class="pill">Sleep</span>
+      <span class="pill">Unwind</span>
+      <span class="pill">Work Focus</span>
+      <span class="pill">Pain Relief</span>
+      <span class="pill">Creative Flow</span>
+      <span class="pill">Uplift</span>
+      <span class="pill">Reading</span>
+    </div>
+    <p class="note" style="max-width: 650px;">Wellness isn't just recovery — it's prevention. Reading and Work Focus keep you calm and focused <em>before</em> burnout happens. That's therapeutic too.</p>
+  </div>
+
+  <!-- 10: What makes Wellness different -->
+  <div class="slide" data-slide="9">
+    <h2>What Makes It Different</h2>
+    <div class="two-col">
+      <div class="col">
+        <h3>Smart Defaults</h3>
+        <ul>
+          <li>Each option comes <strong>pre-loaded with the right healing layers</strong></li>
+          <li>Backed by research — not random</li>
+          <li>You don't need to know anything about frequencies or brainwaves</li>
+          <li>Just pick your intention and it works</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>Same Living Engine + Radio</h3>
+        <ul>
+          <li>Same generative engine as Player — <strong>every sound is born live</strong></li>
+          <li><strong>Consciousness Stream</strong> — live music for 25+ genres (currently using curated radio as placeholder; future: all AI-generated)</li>
+          <li>Shift your mood → <strong>music crossfades</strong> to match</li>
+          <li>You can <strong>always customize</strong> — add or remove layers from the player</li>
+          <li>No play button needed — music starts automatically</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11: Science-backed defaults -->
+  <div class="slide" data-slide="10">
+    <h2>Science-Backed Defaults</h2>
+    <p style="text-align: center; margin-bottom: 16px;">Each intention automatically activates the right healing layers</p>
+    <table class="simple-table">
+      <thead><tr><th>Intention</th><th>Activates</th><th>Why It Works</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Sleep</strong></td><td>Binaural beats · Delta frequency</td><td>Deep sleep brainwave range</td></tr>
+        <tr><td><strong>Meditate</strong></td><td>Tibetan singing bowls · Theta</td><td>Shown to reduce anxiety</td></tr>
+        <tr><td><strong>Work Focus</strong></td><td>Isochronic tones · Beta</td><td>Concentration sweet spot</td></tr>
+        <tr><td><strong>Creative</strong></td><td>Binaural beats · Theta</td><td>Associated with creative insight</td></tr>
+        <tr><td><strong>Pain Relief</strong></td><td>Binaural beats · Delta</td><td>Body relaxation response</td></tr>
+        <tr><td><strong>Unwind</strong></td><td>Ocean waves · Alpha</td><td>Stress reduction</td></tr>
+        <tr><td><strong>Reading</strong></td><td>Isochronic tones · Alpha</td><td>Sustained focus without headphones</td></tr>
+        <tr><td><strong>Uplift</strong></td><td>Wind chimes · Alpha</td><td>Bright, uplifting tonal texture</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 12: Meditation styles -->
+  <div class="slide" data-slide="11">
+    <h2>Meditation Styles</h2>
+    <div class="card-grid" style="max-width: 750px;">
+      <div class="card accent-border">
+        <h4>Introspection</h4>
+        <p>Ambient generative music. Look inward. No voice — just you and the sound.</p>
+      </div>
+      <div class="card accent-border">
+        <h4>Full Chakra Tuning</h4>
+        <p>Voice-guided journey from Root to Crown. Custom recorded audio. 10 minutes.</p>
+      </div>
+      <div class="card accent-border">
+        <h4>Gratitude Practice</h4>
+        <p>Gentle ambient music for reflecting on what's good.</p>
+      </div>
+    </div>
+    <p class="note" style="max-width: 650px;">Chakra Tuning is the first voice-guided session — included to prove the concept. Future: more sessions, and exploring AI-generated voice guided meditation in real time based on mood or prompts.</p>
+  </div>
+
+  <!-- 13: Layers -->
+  <div class="slide" data-slide="12">
+    <h2>Layers You Can Mix</h2>
+    <div class="two-col" style="max-width: 800px;">
+      <div class="col">
+        <h3>Healing Sounds</h3>
+        <ul>
+          <li>Binaural beats</li>
+          <li>Isochronic tones</li>
+          <li>Tibetan singing bowls</li>
+          <li>Whale sounds</li>
+          <li>Heartbeat pulse</li>
+          <li>Wind chimes · Deep gong · Soft flute</li>
+          <li>Chanting</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>Nature Sounds</h3>
+        <ul>
+          <li>Ocean waves</li>
+          <li>Gentle stream</li>
+          <li>Rain</li>
+          <li>Fireplace</li>
+          <li>Calm forest</li>
+          <li>Night crickets</li>
+          <li>Mountain breeze · Windy meadow</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">All customizable from the player at any time</p>
+  </div>
+
+  <!-- 14: Wellness updates -->
+  <div class="slide" data-slide="13">
+    <h2>Latest Updates — Wellness</h2>
+    <div class="full-width">
+      <ul>
+        <li><strong>Picks the right layers automatically</strong> — just choose your intention</li>
+        <li><strong>Music starts on its own</strong> — no play button needed</li>
+        <li><strong>Welcome music loads instantly</strong> — preloaded while splash screen shows</li>
+        <li><strong>Streamlined flow</strong> — removed the separate "Customize" step; now accessible from player</li>
+        <li><strong>All intentions share the same rich generative base</strong> — layers create the difference</li>
+        <li><strong>Consciousness Stream</strong> — 25+ genres with crossfade on mood shift (radio placeholder → future: fully AI-generated)</li>
+        <li><strong>Reading modes</strong> — Soft (generative synth) or Lo-fi Beats (radio placeholder, future: live-generated beats)</li>
+        <li><strong>Renamed to Kálma Wellness</strong> to distinguish from Player</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 15: The Opportunity -->
+  <div class="slide" data-slide="14">
+    <h2>The Opportunity</h2>
+    <p class="subtitle">AI wellness music market</p>
+    <div class="stat-row">
+      <div class="stat">
+        <div class="number">$1.8B</div>
+        <div class="label">Market today</div>
+      </div>
+      <div class="stat">
+        <div class="number">$7.4B</div>
+        <div class="label">Projected 2034</div>
+      </div>
+      <div class="stat">
+        <div class="number">17.1%</div>
+        <div class="label">Annual growth</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 16: Competition -->
+  <div class="slide" data-slide="15">
+    <h2>The Competition</h2>
+    <div class="full-width">
+      <table class="simple-table">
+        <thead><tr><th>Platform</th><th>Approach</th><th>Limitation</th></tr></thead>
+        <tbody>
+          <tr><td>Endel</td><td style="color: var(--dim);">Algorithmic, button presets</td><td style="color: var(--dim);">You pick a mode — it doesn't truly adapt</td></tr>
+          <tr><td>Brain.fm</td><td style="color: var(--dim);">Pre-composed tracks</td><td style="color: var(--dim);">Real recordings on repeat — not generative</td></tr>
+          <tr><td><strong class="highlight">Kálma</strong></td><td><strong>Generated live in real-time</strong></td><td style="color: var(--green);">Adapts to environment + learns from you</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="vision-box" style="margin-top: 28px;">
+      <p style="font-size: 0.95rem;"><strong>Nobody else does all three:</strong> generates everything live, adapts to your environment, and learns from you</p>
+    </div>
+  </div>
+
+  <!-- 17: Built with -->
+  <div class="slide" data-slide="16">
+    <h2>Built With</h2>
+    <div class="card-grid" style="max-width: 850px;">
+      <div class="card">
+        <h4>Browser-Native</h4>
+        <p>No app store, no installation. Opens in any modern browser.</p>
+      </div>
+      <div class="card">
+        <h4>Real-Time Synthesis</h4>
+        <p>All music created from scratch — no sound files playing back</p>
+      </div>
+      <div class="card">
+        <h4>Weather Awareness</h4>
+        <p>Free weather data for environmental sensing</p>
+      </div>
+      <div class="card">
+        <h4>AI Understanding</h4>
+        <p>Natural language mood interpretation via AI</p>
+      </div>
+      <div class="card">
+        <h4>Mobile-First</h4>
+        <p>Designed for phones — works everywhere</p>
+      </div>
+      <div class="card">
+        <h4>No Dependencies</h4>
+        <p>Pure code, no frameworks — lean and fast</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 18: What's Next — Mobile -->
+  <div class="slide" data-slide="17">
+    <h2>What's Next — Mobile App</h2>
+    <div class="card-grid" style="max-width: 750px;">
+      <div class="card green-border">
+        <h4>Native iOS &amp; Android</h4>
+        <p>Faster, smoother, always in your pocket</p>
+      </div>
+      <div class="card green-border">
+        <h4>Background Playback</h4>
+        <p>Music keeps going when you switch apps or lock your screen</p>
+      </div>
+      <div class="card green-border">
+        <h4>Wellness Reminders</h4>
+        <p>Daily push notifications to check in with yourself</p>
+      </div>
+      <div class="card green-border">
+        <h4>Offline Mode</h4>
+        <p>Your personalized soundscapes, no internet needed</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 19: Talk to Kálma -->
+  <div class="slide" data-slide="18">
+    <h2>Vision — Talk to Kálma</h2>
+    <p class="subtitle" style="margin-bottom: 8px;">Future development</p>
+    <p class="big-text" style="margin-bottom: 24px;">Kálma becomes a living musical entity</p>
+    <div class="full-width" style="max-width: 750px;">
+      <ul>
+        <li>It <strong>listens, speaks, and plays</strong> — all at once</li>
+        <li>Talk naturally — about your day, your stress, your mood, anything</li>
+        <li>It responds in <strong>words and music at the same time</strong></li>
+        <li>The music isn't a separate feature — it's Kálma's <strong>emotional language</strong>, always running underneath</li>
+        <li>Tell it you're anxious → it <strong>talks you through it</strong> while the sound wraps around you</li>
+        <li>Ask it a question → it answers, and the <strong>music reflects the tone</strong> of the conversation</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 20: Talk to Kálma (continued) -->
+  <div class="slide" data-slide="19">
+    <h2>Vision — Talk to Kálma</h2>
+    <p class="subtitle">It remembers. It learns. It grows.</p>
+    <div class="two-col" style="max-width: 800px; margin-top: 20px;">
+      <div class="info-box" style="max-width: none;">
+        <h3>Memory</h3>
+        <p>Remembers your history — what helped, what didn't, what time you usually check in</p>
+      </div>
+      <div class="info-box" style="max-width: none;">
+        <h3>Personal</h3>
+        <p>Over time it becomes something unique to you. Not an assistant. Not a playlist. <strong>A presence.</strong></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 21: Vision -->
+  <div class="slide" data-slide="20">
+    <div class="orb-container"><div class="orb"><img src="./brand/kalma-orb.svg" alt="Kálma"></div></div>
+    <div class="vision-box">
+      <p>Kálma is the first AI you don't just talk <em>to</em> — you <strong>feel</strong> it.<br><br>
+      It responds with language and music as one.<br>
+      A companion that meets you where you are, every day.</p>
+    </div>
+    <p style="color: var(--dim); font-size: 1rem; margin-top: 32px; letter-spacing: 0.05em;">kálma</p>
+    <p style="margin-top: 24px;"><a href="./architecture.html" target="_blank" style="color: var(--accent); text-decoration: none; font-size: 0.85rem; border-bottom: 1px solid rgba(180,142,255,0.3);">Detailed architecture &amp; technical docs →</a></p>
+  </div>
+
+</div>
+
+<div class="nav">
+  <button id="btn-prev" title="Previous (← key)">←</button>
+  <span class="counter" id="counter">1 / 21</span>
+  <button id="btn-next" title="Next (→ key)">→</button>
+</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const counter = document.getElementById('counter');
+  const progress = document.getElementById('progress');
+
+  function goTo(n) {
+    if (n < 0 || n >= total) return;
+    slides[current].classList.remove('active');
+    current = n;
+    slides[current].classList.add('active');
+    counter.textContent = (current + 1) + ' / ' + total;
+    progress.style.width = ((current + 1) / total * 100) + '%';
+  }
+
+  document.getElementById('btn-prev').addEventListener('click', () => goTo(current - 1));
+  document.getElementById('btn-next').addEventListener('click', () => goTo(current + 1));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goTo(current + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(current - 1); }
+  });
+  let touchStartX = 0;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', (e) => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) { diff > 0 ? goTo(current + 1) : goTo(current - 1); }
+  });
+  progress.style.width = (1 / total * 100) + '%';
+</script>
+
+</body>
+</html>

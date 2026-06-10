@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0a12">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <title>Kálma</title>
+    <script>
+    // Force-unregister old service worker to bust stale cache
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+      });
+      caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+    }
+    </script>
+    <link rel="stylesheet" href="./style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Background Canvas for Visuals -->
+        <canvas id="bg-canvas"></canvas>
+
+        <!-- Screen 0: Splash / Preload -->
+        <div id="screen-splash" class="screen active">
+            <div class="splash-content" id="splash-tap">
+                <div class="splash-orb">
+                    <div class="splash-orb-layer orb-1"></div>
+                    <div class="splash-orb-layer orb-2"></div>
+                    <div class="splash-orb-layer orb-3"></div>
+                    <div class="splash-orb-layer orb-4"></div>
+                    <div class="splash-orb-core"></div>
+                    <h1 class="splash-logo">Kálma</h1>
+                </div>
+                <p class="splash-hint">Tap anywhere to enter</p>
+            </div>
+        </div>
+
+        <!-- Onboarding (first visit only) -->
+        <div id="screen-onboard" class="screen">
+            <div class="onboard-content">
+                <div class="onboard-slides">
+                    <div class="onboard-slide active" data-slide="0">
+                        <div class="onboard-icon">
+                            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1" width="64" height="64">
+                                <circle cx="32" cy="32" r="8" opacity=".6"/>
+                                <circle cx="32" cy="32" r="16" opacity=".3"/>
+                                <circle cx="32" cy="32" r="24" opacity=".15"/>
+                            </svg>
+                        </div>
+                        <h2 class="onboard-title">Welcome to Kálma</h2>
+                        <p class="onboard-text">A living sound experience that adapts to how you feel. Not a playlist — a relationship with music.</p>
+                    </div>
+                    <div class="onboard-slide" data-slide="1">
+                        <div class="onboard-icon">
+                            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1" width="64" height="64">
+                                <path d="M16 32c4-8 8-12 16-12s12 4 16 12" opacity=".4"/>
+                                <path d="M16 32c4 8 8 12 16 12s12-4 16-12" opacity=".4"/>
+                                <circle cx="32" cy="32" r="4" fill="currentColor" stroke="none" opacity=".6"/>
+                            </svg>
+                        </div>
+                        <h2 class="onboard-title">Sound That Listens</h2>
+                        <p class="onboard-text">Choose your mood, layer therapeutic frequencies, and shift the music anytime just by telling it how you feel.</p>
+                    </div>
+                    <div class="onboard-slide" data-slide="2">
+                        <div class="onboard-icon">
+                            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1" width="64" height="64">
+                                <path d="M8 44c4-6 8-10 12-10s8 2 12 10" opacity=".3"/>
+                                <path d="M32 44c4-6 8-10 12-10s8 2 12 10" opacity=".3"/>
+                                <circle cx="20" cy="28" r="2" fill="currentColor" stroke="none" opacity=".4"/>
+                                <circle cx="44" cy="28" r="2" fill="currentColor" stroke="none" opacity=".4"/>
+                                <path d="M20 20v-6M44 20v-6" opacity=".2" stroke-width="0.8"/>
+                            </svg>
+                        </div>
+                        <h2 class="onboard-title">Heal Through Sound</h2>
+                        <p class="onboard-text">Binaural beats, isochronic tones, singing bowls — clinically studied frequencies layered into every session.</p>
+                    </div>
+                </div>
+                <div class="onboard-dots">
+                    <span class="onboard-dot active" data-dot="0"></span>
+                    <span class="onboard-dot" data-dot="1"></span>
+                    <span class="onboard-dot" data-dot="2"></span>
+                </div>
+                <button class="onboard-btn" id="btn-onboard-next">Next</button>
+                <button class="onboard-skip" id="btn-onboard-skip">Skip</button>
+            </div>
+        </div>
+
+        <!-- Screen 1: Welcome -->
+        <div id="screen-welcome" class="screen">
+            <div class="welcome-content">
+                <h1 class="logo">Kálma</h1>
+                <p class="tagline">What are you seeking right now?</p>
+                <div class="intent-grid">
+                    <!-- Row 1: Meditate (ambient) | Reading (beats) -->
+                    <button class="intent-btn" data-intent="meditate">
+                        <span class="intent-icon"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><circle cx="24" cy="24" r="4"/><circle cx="24" cy="24" r="10" opacity=".5"/><circle cx="24" cy="24" r="16" opacity=".25"/><circle cx="24" cy="24" r="22" opacity=".12"/></svg></span>
+                        <span class="intent-label">Meditate</span>
+                        <span class="intent-sub">Guided or sound journey</span>
+                    </button>
+                    <button class="intent-btn" data-intent="reading">
+                        <span class="intent-icon"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M6 12 Q24 6 24 24 Q24 6 42 12"/><path d="M6 12v22 Q24 28 24 46 Q24 28 42 34V12" opacity=".4"/><line x1="24" y1="24" x2="24" y2="46" opacity=".2"/></svg></span>
+                        <span class="intent-label">Reading Mood</span>
+                        <span class="intent-sub">Lo-fi beats to stay focused</span>
+                    </button>
+                    <!-- Row 2: Sleep (ambient) | Work (beats) -->
+                    <button class="intent-btn" data-intent="sleep">
+                        <span class="intent-icon"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M32 12a14 14 0 1 0 0 24A12 12 0 0 1 32 12z"/><circle cx="14" cy="38" r="1" fill="currentColor" stroke="none" opacity=".3"/><circle cx="18" cy="40" r="0.6" fill="currentColor" stroke="none" opacity=".2"/></svg></span>
+                        <span class="intent-label">Help Me Sleep</span>
+                        <span class="intent-sub">Drift off peacefully</span>
+                    </button>
+                    <button class="intent-btn" data-intent="work">
+                        <span class="intent-icon"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="10" y="14" width="28" height="22" rx="2" opacity=".4"/><line x1="10" y1="20" x2="38" y2="20" opacity=".3"/><circle cx="24" cy="32" r="3"/><path d="M18 14v-4a6 6 0 0 1 12 0v4" opacity=".3"/></svg></span>
+                        <span class="intent-label">Work Focus</span>
+                        <span class="intent-sub">Music to stay productive</span>
+                    </button>
+                    <!-- Row 3: Pain (ambient/freq) | Creative (beats) -->
+                    <button class="intent-btn" data-intent="pain">
+                        <span class="intent-icon"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M14 20c2-4 6-6 10-6s8 2 10 6" opacity=".4"/><path d="M14 28c2 4 6 6 10 6s8-2 10-6" opacity=".4"/><circle cx="24" cy="24" r="5"/><path d="M21 24h6" opacity=".5"/><path d="M24 21v6" opacity=".5"/></svg></span>
+                        <span class="intent-label">Pain Relief</span>
+                        <span class="intent-sub">Soothing frequencies for comfort</span>
+                    </button>
+                    <button class="intent-btn" data-intent="creative">
+                        <span class="intent-icon"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M8 40 Q14 20 24 24 Q34 28 28 8"/><path d="M12 36 Q20 24 28 28 Q36 32 40 12" opacity=".4"/><circle cx="8" cy="40" r="2" fill="currentColor" stroke="none" opacity=".3"/><circle cx="28" cy="8" r="2" fill="currentColor" stroke="none" opacity=".3"/></svg></span>
+                        <span class="intent-label">Creative Flow</span>
+                        <span class="intent-sub">Get into the zone</span>
+                    </button>
+                    <!-- Row 4: Unwind | Uplift -->
+                    <button class="intent-btn" data-intent="unwind">
+                        <span class="intent-icon"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M8 32c4-6 8-8 16-8s12 4 16 8"/><path d="M8 24c4-6 8-8 16-8s12 4 16 8" opacity=".5"/><path d="M8 16c4-6 8-8 16-8s12 4 16 8" opacity=".25"/></svg></span>
+                        <span class="intent-label">Unwind & Relax</span>
+                        <span class="intent-sub">Let go of the day</span>
+                    </button>
+                    <button class="intent-btn" data-intent="uplift">
+                        <span class="intent-icon"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M10 36 Q24 8 38 36" /><path d="M16 36 Q24 16 32 36" opacity=".5"/><circle cx="24" cy="20" r="2" fill="currentColor" stroke="none" opacity=".6"/></svg></span>
+                        <span class="intent-label">Uplift My Mood</span>
+                        <span class="intent-sub">Gentle positivity</span>
+                    </button>
+
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen 2: Customize Layers -->
+        <div id="screen-layers" class="screen">
+            <div class="layers-content">
+                <button class="back-btn" id="btn-back-welcome">← Back</button>
+                <h2 class="section-title">Customize Your Experience</h2>
+                <p class="selected-intent-display" id="selected-intent-text"></p>
+
+                <div class="layers-body">
+                    <!-- Left: selections -->
+                    <div class="layers-left">
+
+                        <!-- Meditation Layers -->
+                        <div class="layer-section">
+                            <div class="layer-header">
+                                <div>
+                                    <h3 class="layer-title"><svg class="section-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><circle cx="16" cy="16" r="3"/><circle cx="16" cy="16" r="8" opacity=".5"/><circle cx="16" cy="16" r="13" opacity=".25"/></svg> Meditation Layers</h3>
+                                    <p class="layer-desc">Add elements to deepen your state</p>
+                                </div>
+                                <button class="layer-skip-btn" data-section="meditation">Skip</button>
+                            </div>
+                            <div class="layer-options" id="meditation-layers">
+                                <div class="chip-wrap">
+                                    <button class="layer-chip" data-layer="binaural">Binaural Beats</button>
+                                    <button class="info-btn" data-info="binaural"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="14"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg></button>
+                                </div>
+                                <div class="chip-wrap">
+                                    <button class="layer-chip" data-layer="isochronic">Isochronic Tones</button>
+                                    <button class="info-btn" data-info="isochronic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="14"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg></button>
+                                </div>
+                                <div class="chip-wrap">
+                                    <button class="layer-chip" data-layer="singing-bowls">Tibetan Bowls</button>
+                                    <button class="info-btn" data-info="singing-bowls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="14"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg></button>
+                                </div>
+                                <div class="chip-wrap">
+                                    <button class="layer-chip" data-layer="whale">Whale Sounds</button>
+                                    <button class="info-btn" data-info="whale"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="14"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg></button>
+                                </div>
+                                <div class="chip-wrap">
+                                    <button class="layer-chip" data-layer="heartbeat">Heartbeat Pulse</button>
+                                    <button class="info-btn" data-info="heartbeat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="14"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg></button>
+                                </div>
+                                <div class="chip-wrap">
+                                    <button class="layer-chip" data-layer="wind-chimes">Wind Chimes</button>
+                                    <button class="info-btn" data-info="wind-chimes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="14"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg></button>
+                                </div>
+                                <div class="chip-wrap">
+                                    <button class="layer-chip" data-layer="gong">Deep Gong</button>
+                                    <button class="info-btn" data-info="gong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="14"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg></button>
+                                </div>
+                                <div class="chip-wrap">
+                                    <button class="layer-chip" data-layer="flute">Soft Flute</button>
+                                    <button class="info-btn" data-info="flute"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="14"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg></button>
+                                </div>
+                                <div class="chip-wrap">
+                                    <button class="layer-chip" data-layer="chanting">Chanting</button>
+                                    <button class="info-btn" data-info="chanting"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="14"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></svg></button>
+                                </div>
+                            </div>
+                            <p class="limit-hint hidden" id="meditation-limit-hint">Up to 3 layers for the best experience</p>
+                            <!-- Sleep recommendation -->
+                            <div class="sleep-recommendation hidden" id="sleep-recommendation">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="16" height="16" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none"/></svg>
+                                <p id="recommendation-text">For better sleep results, try adding <strong>Binaural Beats</strong> or <strong>Isochronic Tones</strong> with <strong>Delta</strong> frequency</p>
+                            </div>
+                            <!-- Binaural/Isochronic Frequency Selector -->
+                            <div class="freq-selector hidden" id="freq-selector">
+                                <p class="freq-label">Target Frequency:</p>
+                                <div class="freq-options">
+                                    <button class="freq-btn active" data-freq="delta">Delta (0.5–4 Hz)<br><small>Deep sleep</small></button>
+                                    <button class="freq-btn" data-freq="theta">Theta (4–8 Hz)<br><small>Meditation</small></button>
+                                    <button class="freq-btn" data-freq="alpha">Alpha (8–13 Hz)<br><small>Calm focus</small></button>
+                                    <button class="freq-btn" data-freq="beta">Beta (13–30 Hz)<br><small>Alertness</small></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ambience -->
+                        <div class="layer-section">
+                            <div class="layer-header">
+                                <div>
+                                    <h3 class="layer-title"><svg class="section-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><path d="M4 22c3-4 6-6 12-6s9 3 12 6" opacity=".3"/><path d="M4 18c3-4 6-6 12-6s9 3 12 6" opacity=".5"/><path d="M4 14c3-4 6-6 12-6s9 3 12 6"/><circle cx="22" cy="8" r="2" opacity=".4"/></svg> Ambience</h3>
+                                    <p class="layer-desc">Shape your environment</p>
+                                </div>
+                                <button class="layer-skip-btn" data-section="ambience">Skip</button>
+                            </div>
+                            <div class="layer-options" id="ambience-layers">
+                                <button class="layer-chip" data-ambience="forest">Calm Forest</button>
+                                <button class="layer-chip" data-ambience="stream">Gentle Stream</button>
+
+
+                                <button class="layer-chip" data-ambience="ocean">Ocean Waves</button>
+                                <button class="layer-chip" data-ambience="heavy-rain">Light Rain</button>
+                                <button class="layer-chip" data-ambience="fireplace">Fireplace</button>
+                                <button class="layer-chip" data-ambience="meadow">Windy Meadow</button>
+                                <button class="layer-chip" data-ambience="crickets">Night Crickets</button>
+                                <button class="layer-chip" data-ambience="mountain">Mountain Breeze</button>
+
+                            </div>
+                            <p class="limit-hint hidden" id="ambience-limit-hint">Up to 3 layers for the best experience</p>
+                        </div>
+
+                        <p class="layers-hint" id="layers-hint">Select or skip each category to continue — you can adjust layers anytime in the player</p>
+                        <button class="begin-btn disabled" id="btn-begin" disabled>Continue</button>
+
+                    </div>
+
+                    <!-- Right: info panel -->
+                    <div class="layers-right" id="layers-right">
+                        <div class="info-panel">
+                            <div class="info-placeholder" id="info-placeholder">
+                                <svg class="info-placeholder-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round">
+                                    <circle cx="24" cy="24" r="18" opacity=".25"/>
+                                    <line x1="24" y1="16" x2="24" y2="26"/>
+                                    <circle cx="24" cy="32" r="1.5" fill="currentColor" stroke="none"/>
+                                </svg>
+                                <p>Tap the info icon next to any layer to learn how it affects your mind</p>
+                            </div>
+                            <div class="info-content hidden" id="info-content">
+                                <div class="info-panel-header">
+                                    <span class="info-panel-title" id="info-panel-title"></span>
+                                    <button class="info-panel-close" id="info-panel-close">✕</button>
+                                </div>
+                                <p class="info-panel-benefit" id="info-panel-benefit"></p>
+                                <p class="info-panel-text" id="info-panel-text"></p>
+                                <div class="info-panel-tip" id="info-panel-tip"></div>
+                                <p class="info-panel-source" id="info-panel-source"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen 3: Guidance Style (conditional) -->
+        <div id="screen-guidance" class="screen">
+            <div class="guidance-content">
+                <button class="back-btn" id="btn-back-to-layers">← Back</button>
+                <h2 class="section-title">Choose Your Practice</h2>
+                <p class="guidance-subtitle">What kind of meditation?</p>
+
+                <div class="guidance-options" id="guidance-options">
+                    <button class="guidance-card" data-meditation="introspection">
+                        <span class="guidance-icon"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><ellipse cx="20" cy="20" rx="6" ry="15"/><ellipse cx="20" cy="20" rx="15" ry="6" opacity=".4"/><circle cx="20" cy="20" r="2" fill="currentColor" stroke="none" opacity=".5"/></svg></span>
+                        <span class="guidance-name">Introspection</span>
+                        <span class="guidance-desc">Look inward · Ambient music</span>
+                    </button>
+                    <button class="guidance-card" data-meditation="chakra">
+                        <span class="guidance-icon"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><circle cx="20" cy="6" r="2" opacity=".3"/><circle cx="20" cy="11" r="2" opacity=".4"/><circle cx="20" cy="16" r="2" opacity=".5"/><circle cx="20" cy="21" r="2" opacity=".6"/><circle cx="20" cy="26" r="2" opacity=".7"/><circle cx="20" cy="31" r="2" opacity=".8"/><circle cx="20" cy="36" r="2" opacity="1"/><line x1="20" y1="4" x2="20" y2="38" opacity=".15"/></svg></span>
+                        <span class="guidance-name">Full Chakra Tuning</span>
+                        <span class="guidance-desc">Voice-guided · Root to Crown · 10 min</span>
+                    </button>
+                    <button class="guidance-card" data-meditation="gratitude">
+                        <span class="guidance-icon"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><path d="M20 34 C20 34 5 24 5 15 A8 8 0 0 1 20 12" opacity=".4"/><path d="M20 34 C20 34 35 24 35 15 A8 8 0 0 0 20 12" opacity=".4"/><path d="M20 12v22" opacity=".2"/><circle cx="20" cy="12" r="1.5" fill="currentColor" stroke="none" opacity=".4"/></svg></span>
+                        <span class="guidance-name">Practice Gratitude</span>
+                        <span class="guidance-desc">Reflect on what's good · Ambient music</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- Screen 5: Pre-Journey -->
+        <div id="screen-prejourney" class="screen">
+            <div class="prejourney-content">
+                <p class="prejourney-message">Gently let go of expectations and invite a sense of openness. The sounds will guide you where you need to go.</p>
+                <div class="prejourney-orb">
+                    <div class="splash-orb-layer orb-2"></div>
+                    <div class="splash-orb-layer orb-3"></div>
+                    <div class="splash-orb-layer orb-4"></div>
+                    <div class="splash-orb-core"></div>
+                </div>
+                <button class="prejourney-btn" id="btn-begin-journey">Begin Your Journey</button>
+            </div>
+        </div>
+
+        <!-- Screen 6: Player -->
+        <div id="screen-player" class="screen">
+            <div class="player-content">
+                <div class="player-header">
+                    <h1 class="player-logo" id="btn-player-home" style="cursor:pointer">Kálma</h1>
+                    <button class="back-btn" id="btn-back-layers">✕</button>
+                </div>
+
+                <div class="player-visual">
+                    <div class="viz-orb" id="viz-orb">
+                        <div class="splash-orb-layer orb-2"></div>
+                        <div class="splash-orb-layer orb-3"></div>
+                        <div class="splash-orb-layer orb-4"></div>
+                        <div class="splash-orb-core"></div>
+                        <canvas id="visualizer-canvas" class="visualizer-canvas"></canvas>
+                    </div>
+                </div>
+                <div class="consciousness-label">
+                    <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="0.6" width="18" height="18">
+                        <circle cx="18" cy="18" r="6"/>
+                        <circle cx="18" cy="12" r="6" opacity=".7"/>
+                        <circle cx="18" cy="24" r="6" opacity=".7"/>
+                        <circle cx="12.8" cy="15" r="6" opacity=".5"/>
+                        <circle cx="23.2" cy="15" r="6" opacity=".5"/>
+                        <circle cx="12.8" cy="21" r="6" opacity=".5"/>
+                        <circle cx="23.2" cy="21" r="6" opacity=".5"/>
+                    </svg>
+                    Consciousness Stream
+                </div>
+                <div class="player-status" id="player-status">Breathe</div>
+
+                <!-- Work genre toggle -->
+                <div class="work-genre-toggle hidden" id="work-genre-toggle">
+                    <button class="reading-style-btn active" data-genre="lofi">Lo-fi</button>
+                    <button class="reading-style-btn" data-genre="jazz">Jazz</button>
+                    <button class="reading-style-btn" data-genre="classical">Classical</button>
+                    <button class="reading-style-btn" data-genre="electronic">Electronic</button>
+                </div>
+
+                <!-- Music source toggle (hidden for now — Consciousness Stream saved for later) -->
+                <div class="music-source-toggle hidden" id="music-source-toggle">
+                    <button class="reading-style-btn active" data-style="soft">Generated</button>
+                    <button class="reading-style-btn" data-style="radio">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="12" height="12" style="margin-right:4px;vertical-align:middle"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7" opacity=".5"/><circle cx="12" cy="12" r="11" opacity=".25"/></svg>Consciousness Stream
+                    </button>
+                </div>
+
+                <div class="player-controls">
+                    <div class="prompt-toggle-row">
+                        <button class="prompt-toggle-btn" id="btn-prompt-toggle">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M4 6h16M4 12h10M4 18h14"/></svg>
+                            <span id="prompt-toggle-text">Shift mood</span>
+                        </button>
+                        <div class="prompt-inline hidden" id="player-prompt-area">
+                            <input type="text" id="mood-prompt" placeholder="How do you feel?" class="mood-input">
+                            <button id="btn-send-prompt" class="send-btn">→</button>
+                        </div>
+                    </div>
+                    <button class="mood-reset-btn hidden" id="mood-reset-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><path d="M3 12a9 9 0 1 1 3-6.5"/><path d="M3 3v4h4"/></svg>
+                        Return to original mood
+                    </button>
+
+                    <div class="volume-label-centered">Master Volume</div>
+                    <div class="volume-main">
+                        <div class="control-group">
+                            <input type="range" id="master-volume" min="0" max="100" value="70" class="slider">
+                        </div>
+                        <button class="mix-toggle-btn" id="btn-mix-toggle">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="11" cy="18" r="2" fill="currentColor"/></svg>
+                            <span>Mix</span>
+                        </button>
+                    </div>
+                    <div class="mix-panel hidden" id="mix-panel">
+                        <div class="control-group">
+                            <label>Music</label>
+                            <input type="range" id="music-volume" min="0" max="100" value="50" class="slider">
+                        </div>
+                        <div class="control-group hidden" id="mix-ambience">
+                            <label>Ambience</label>
+                            <input type="range" id="ambience-volume" min="0" max="100" value="50" class="slider">
+                        </div>
+                        <div class="control-group hidden" id="mix-layers">
+                            <label>Meditation Layers</label>
+                            <input type="range" id="layers-volume" min="0" max="100" value="40" class="slider">
+                        </div>
+                        <div class="control-group hidden" id="mix-voice">
+                            <label>Voice Guidance</label>
+                            <input type="range" id="voice-volume" min="0" max="100" value="85" class="slider">
+                        </div>
+                    </div>
+
+                    <div class="voice-mute-row hidden" id="voice-mute-row">
+                        <button class="mix-toggle-btn" id="btn-voice-mute">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M12 3v18M8 7l-4 4v2l4 4M16 7l4 4v2l-4 4"/></svg>
+                            <span id="voice-mute-text">Mute Voice</span>
+                        </button>
+                    </div>
+                    <button class="customize-btn" id="btn-customize-experience">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="11" cy="18" r="2" fill="currentColor"/></svg>
+                        Customize Your Experience
+                    </button>
+                    <div class="active-layers" id="active-layers-display"></div>
+
+                    <div class="layer-drawer hidden" id="layer-drawer">
+                        <div class="drawer-section">
+                            <span class="drawer-label">Meditation</span>
+                            <div class="drawer-chips" id="drawer-meditation">
+                                <button class="drawer-chip" data-layer="binaural">Binaural Beats</button>
+                                <button class="drawer-chip" data-layer="isochronic">Isochronic Tones</button>
+                                <button class="drawer-chip" data-layer="singing-bowls">Tibetan Bowls</button>
+                                <button class="drawer-chip" data-layer="whale">Whale Sounds</button>
+                                <button class="drawer-chip" data-layer="heartbeat">Heartbeat</button>
+                                <button class="drawer-chip" data-layer="wind-chimes">Wind Chimes</button>
+                                <button class="drawer-chip" data-layer="gong">Deep Gong</button>
+                                <button class="drawer-chip" data-layer="flute">Soft Flute</button>
+                                <button class="drawer-chip" data-layer="chanting">Chanting</button>
+                            </div>
+                        </div>
+                        <div class="drawer-freq hidden" id="drawer-freq-binaural">
+                            <span class="drawer-label">Binaural Beats — Frequency</span>
+                            <div class="drawer-chips">
+                                <button class="drawer-chip drawer-freq-btn" data-target="binaural" data-freq="delta">Delta<br><small>Deep sleep</small></button>
+                                <button class="drawer-chip drawer-freq-btn" data-target="binaural" data-freq="theta">Theta<br><small>Meditation</small></button>
+                                <button class="drawer-chip drawer-freq-btn" data-target="binaural" data-freq="alpha">Alpha<br><small>Calm focus</small></button>
+                                <button class="drawer-chip drawer-freq-btn" data-target="binaural" data-freq="beta">Beta<br><small>Alertness</small></button>
+                            </div>
+                        </div>
+                        <div class="drawer-freq hidden" id="drawer-freq-isochronic">
+                            <span class="drawer-label">Isochronic Tones — Frequency</span>
+                            <div class="drawer-chips">
+                                <button class="drawer-chip drawer-freq-btn" data-target="isochronic" data-freq="delta">Delta<br><small>Deep sleep</small></button>
+                                <button class="drawer-chip drawer-freq-btn" data-target="isochronic" data-freq="theta">Theta<br><small>Meditation</small></button>
+                                <button class="drawer-chip drawer-freq-btn" data-target="isochronic" data-freq="alpha">Alpha<br><small>Calm focus</small></button>
+                                <button class="drawer-chip drawer-freq-btn" data-target="isochronic" data-freq="beta">Beta<br><small>Alertness</small></button>
+                            </div>
+                        </div>
+                        <p class="limit-hint hidden" id="drawer-meditation-limit">Up to 3 layers for the best experience</p>
+                        <div class="drawer-section">
+                            <span class="drawer-label">Ambience</span>
+                            <div class="drawer-chips" id="drawer-ambience">
+                                <button class="drawer-chip" data-ambience="forest">Calm Forest</button>
+                                <button class="drawer-chip" data-ambience="stream">Gentle Stream</button>
+
+
+                                <button class="drawer-chip" data-ambience="ocean">Ocean Waves</button>
+                                <button class="drawer-chip" data-ambience="heavy-rain">Light Rain</button>
+                                <button class="drawer-chip" data-ambience="fireplace">Fireplace</button>
+                                <button class="drawer-chip" data-ambience="meadow">Windy Meadow</button>
+                                <button class="drawer-chip" data-ambience="crickets">Night Crickets</button>
+                                <button class="drawer-chip" data-ambience="mountain">Mountain Breeze</button>
+
+                            </div>
+                        </div>
+                        <p class="limit-hint hidden" id="drawer-ambience-limit">Up to 3 layers for the best experience</p>
+                        <button class="drawer-close-btn" id="btn-drawer-close">Done</button>
+                    </div>
+
+                    <div class="timer-display hidden" id="timer-display"></div>
+
+                    <button class="play-pause-btn" id="btn-play-pause">
+                        <span id="play-icon"><svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><polygon points="6,3 20,12 6,21"/></svg></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <!-- Screen 7: Session Complete -->
+        <div id="screen-complete" class="screen">
+            <div class="complete-content">
+                <div class="complete-orb">
+                    <div class="splash-orb-layer orb-3"></div>
+                    <div class="splash-orb-layer orb-4"></div>
+                    <div class="splash-orb-core"></div>
+                </div>
+                <h2 class="complete-title">Your journey is complete</h2>
+                <p class="complete-subtitle">Take a moment before you go</p>
+
+                <div class="mood-check">
+                    <p class="mood-check-label">How do you feel now?</p>
+                    <div class="mood-check-options">
+                        <button class="mood-btn" data-mood="much-better">
+                            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" width="28" height="28"><circle cx="16" cy="16" r="12"/><path d="M10 14v-1M22 14v-1" stroke-linecap="round"/><path d="M10 20c2 3 10 3 12 0"/></svg>
+                            <span>Much better</span>
+                        </button>
+                        <button class="mood-btn" data-mood="better">
+                            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" width="28" height="28"><circle cx="16" cy="16" r="12"/><path d="M10 14v-1M22 14v-1" stroke-linecap="round"/><path d="M11 19c2 2 8 2 10 0"/></svg>
+                            <span>A bit better</span>
+                        </button>
+                        <button class="mood-btn" data-mood="same">
+                            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" width="28" height="28"><circle cx="16" cy="16" r="12"/><path d="M10 14v-1M22 14v-1" stroke-linecap="round"/><line x1="10" y1="20" x2="22" y2="20"/></svg>
+                            <span>About the same</span>
+                        </button>
+                        <button class="mood-btn" data-mood="worse">
+                            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.2" width="28" height="28"><circle cx="16" cy="16" r="12"/><path d="M10 14v-1M22 14v-1" stroke-linecap="round"/><path d="M11 22c2-2 8-2 10 0"/></svg>
+                            <span>Not great</span>
+                        </button>
+                    </div>
+                </div>
+
+                <p class="complete-message hidden" id="complete-message"></p>
+
+                <button class="begin-btn" id="btn-new-session">Start a New Session</button>
+                <button class="begin-btn" id="btn-main-menu" style="margin-top:12px;background:transparent;border:1px solid rgba(108,99,255,0.3);color:var(--text-secondary)">Return to Main Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./config.js"></script>
+    <script src="./engine-wakelock.js"></script>
+    <script src="./engine-ui-sounds.js"></script>
+    <script src="./engine-voice.js"></script>
+    <script src="./engine-voice-audio.js"></script>
+    <script src="./engine-core.js"></script>
+    <script src="./va-synth.js"></script>
+    <script src="./fm-synth.js"></script>
+    <script src="./wavetable-synth.js"></script>
+    <script src="./engine-piano-sampler.js"></script>
+    <script src="./engine-melody.js"></script>
+    <script src="./engine-music-brain.js"></script>
+    <script src="./engine-adaptive.js"></script>
+    <script src="./engine-music.js"></script>
+    <script src="./engine-binaural.js"></script>
+    <script src="./engine-isochronic.js"></script>
+    <script src="./engine-meditation.js"></script>
+    <script src="./engine-ambience.js"></script>
+    <script src="./engine-lyria.js"></script>
+    <script src="./audio-engine.js"></script>
+    <script src="./engine-visualizer.js"></script>
+    <script src="./app.js?v=27"></script>
+    <script>
+      // Preload welcome drone audio while user is on splash screen
+      uiSound.preloadWelcomeDrone();
+    </script>
+    <script>
+      // SW disabled during development — re-enable for production
+      // Nuke any existing SW so stale cache doesn't block updates
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(regs => {
+          regs.forEach(r => { r.unregister(); console.log('[K\u00e1lma] SW unregistered'); });
+        });
+        caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+      }
+    </script>
+</body>
+</html>

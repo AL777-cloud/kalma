@@ -1,0 +1,60 @@
+{
+  "style": "bodyscan",
+  "name": "Body Scan",
+  "voiceSettings": {
+    "rate": 0.78,
+    "pitch": 0.92
+  },
+  "intro": [
+    "Welcome. Let's slow everything down.",
+    "Find a comfortable position. Lying down is ideal, but sitting works too.",
+    "Close your eyes. Let your arms rest at your sides.",
+    "We're going to move through your body, one area at a time.",
+    "There's nothing to do except notice. No fixing. Just feeling.",
+    "Let's begin at the top."
+  ],
+  "body": [
+    [
+      "Bring your attention to the top of your head.",
+      "Notice any sensation there. Tingling. Warmth. Pressure. Or nothing at all.",
+      "Now move to your forehead. Is it smooth, or are you furrowing without realizing?",
+      "Soften it. Let your eyebrows drop. Let the space between them widen.",
+      "Move to your eyes. Let them rest heavy in their sockets. No effort to see."
+    ],
+    [
+      "Now your jaw. This is where many of us hold the world.",
+      "Let your teeth part slightly. Let your tongue rest soft in your mouth.",
+      "Feel your neck. Both sides. The front. The back where it meets your skull.",
+      "Let your neck be long and free. No holding.",
+      "Roll your awareness down to your shoulders. Let them melt downward, away from your ears."
+    ],
+    [
+      "Move into your arms. Your upper arms. Your elbows. Your forearms.",
+      "Feel the weight of each arm. Let them be completely heavy.",
+      "Now your hands. Your palms. Each finger.",
+      "Notice if they're clenched. If so, simply open them. Let them be loose.",
+      "Your hands do so much. Let them rest now."
+    ],
+    [
+      "Bring your attention to your chest. Feel it rise and fall.",
+      "Don't change your breathing. Just watch it.",
+      "Move to your belly. Let it be soft. No need to hold it in.",
+      "Feel your lower back. The curve of your spine.",
+      "If there's tension, breathe into it. Imagine your breath reaching that exact spot."
+    ],
+    [
+      "Now your legs. Your thighs. Heavy against the surface beneath you.",
+      "Your knees. Your shins. Your calves.",
+      "Down to your ankles. Your feet. The soles of your feet.",
+      "Each toe. One by one. Feel them. Thank them.",
+      "Your whole body has been scanned. You are here. Fully present. Fully alive."
+    ]
+  ],
+  "closing": [
+    "Now feel your body as one whole. Not parts. One connected being.",
+    "You've given every part of yourself attention. That's a form of love.",
+    "Take three deep breaths. Each one a little deeper than the last.",
+    "Begin to move gently. Small stretches. Whatever feels good.",
+    "When you're ready, open your eyes. You've come home to yourself."
+  ]
+}

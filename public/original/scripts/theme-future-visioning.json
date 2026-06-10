@@ -1,0 +1,60 @@
+{
+  "theme": "future-visioning",
+  "name": "Future Visioning",
+  "voiceSettings": {
+    "rate": 0.82,
+    "pitch": 0.97
+  },
+  "intro": [
+    "Welcome. Close your eyes and step outside of time for a moment.",
+    "The past is behind you. The present is here. But the future? The future is a canvas.",
+    "Today, we're going to visit who you're becoming.",
+    "Not with anxiety. Not with pressure. With wonder.",
+    "Take a deep breath. Open your imagination.",
+    "Let's look forward."
+  ],
+  "body": [
+    [
+      "Imagine waking up one year from now.",
+      "You open your eyes. Where are you? What does the room look like?",
+      "Is it the same place, or somewhere new?",
+      "Don't force a picture. Let one form naturally, like a photograph developing.",
+      "Whatever appears is speaking from a part of you that knows what you want."
+    ],
+    [
+      "In this future, how do you feel when you wake up?",
+      "Is there heaviness, or lightness? Dread, or anticipation?",
+      "Imagine the best version. The morning where you feel genuinely at peace.",
+      "What had to change for you to feel this way? What did you let go of?",
+      "Hold that feeling. It's not fantasy. It's a compass."
+    ],
+    [
+      "Now see yourself moving through your day. This future day.",
+      "What are you doing? Who are you with? What work fills your time?",
+      "Notice the details. What are you wearing? What sounds surround you?",
+      "Does this life excite you? If so, lean into that excitement.",
+      "Your excitement is data. It's telling you what matters."
+    ],
+    [
+      "Think about what the future version of you had to practice.",
+      "What habits did they build? What boundaries did they set?",
+      "What uncomfortable conversations did they have?",
+      "Growth isn't magical. It's built from small, repeated choices.",
+      "What is one choice the future you made... that you could make today?"
+    ],
+    [
+      "Now imagine the future you looking back at the present you.",
+      "What do they want to say? What message do they send?",
+      "Maybe it's: Keep going. Maybe it's: Be patient. Maybe it's: You're closer than you think.",
+      "Listen. They know how the story unfolds from here.",
+      "Trust them. They're built from everything you do next."
+    ]
+  ],
+  "closing": [
+    "The future isn't something that happens to you. It's something you walk toward.",
+    "And today, you've taken a step just by imagining it.",
+    "Keep this vision close. Return to it when you feel lost.",
+    "Take a deep breath. Open your eyes.",
+    "The first step is already behind you."
+  ]
+}

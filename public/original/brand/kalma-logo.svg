@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <radialGradient id="orb1" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#8cb4ff" stop-opacity="0.25"/>
+      <stop offset="50%" stop-color="#8cb4ff" stop-opacity="0.08"/>
+      <stop offset="70%" stop-color="#8cb4ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb2" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#c8aaff" stop-opacity="0.3"/>
+      <stop offset="50%" stop-color="#c8aaff" stop-opacity="0.08"/>
+      <stop offset="70%" stop-color="#c8aaff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb3" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#ffc8dc" stop-opacity="0.3"/>
+      <stop offset="50%" stop-color="#ffbed2" stop-opacity="0.1"/>
+      <stop offset="70%" stop-color="#ffbed2" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb4" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#b4ffb4" stop-opacity="0.5"/>
+      <stop offset="50%" stop-color="#b4ffb4" stop-opacity="0.15"/>
+      <stop offset="70%" stop-color="#b4ffb4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="core" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#dcffdc" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#c8ffc8" stop-opacity="0.2"/>
+      <stop offset="70%" stop-color="#c8ffc8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="400" fill="#0a0a12"/>
+  <!-- Orb layers -->
+  <circle cx="200" cy="180" r="150" fill="url(#orb1)"/>
+  <circle cx="200" cy="180" r="112" fill="url(#orb2)"/>
+  <circle cx="200" cy="180" r="82" fill="url(#orb3)"/>
+  <circle cx="200" cy="180" r="52" fill="url(#orb4)"/>
+  <circle cx="200" cy="180" r="30" fill="url(#core)"/>
+  <!-- Logo text -->
+  <text x="200" y="340" text-anchor="middle" font-family="Georgia, 'Cormorant Garamond', serif" font-size="48" font-weight="300" letter-spacing="12" fill="rgba(255,255,255,0.92)">Kálma</text>
+</svg>
